@@ -38,6 +38,19 @@ Zadano: razine usluge A 98 % / B 95 % / C 90 %, S = 60 € po narudžbi, h = 20 
   (u kodu: `Parametri.cf_faktori`, `Parametri.cf_prag`). U sučelju je prvo rezultat (zaokružen) i rečenica o glavnom nalazu,
   a tablica je u rasklopljenom odjeljku "Kako smo to izračunali".
 
+## Sučelje
+
+Jedan ekran u danom trenutku, uz korake na vrhu (**1 Podaci, 2 Analiza, 3 Narudžba**):
+
+1. **Podaci:** samo područje za datoteku. Gumb "Analiziraj" pojavi se tek kad je datoteka odabrana. Špranca (Excel, CSV), pregled
+   što mora biti u datoteci i primjer su sitne poveznice ispod.
+2. **Analiza:** četiri glavna broja i tri kartice: *Matrice*, *Artikli* i *Cash-flow*. Rjeđe opcije (ABC po marži ili količini,
+   dobavljač) su u "Više opcija". Klik na polje matrice otvara popis tih artikala.
+3. **Narudžba:** količine po dobavljaču i CSV za ERP.
+
+**Postavke** su zaseban ekran (gumb gore desno): trošak narudžbe i držanja, razine usluge, ABC/XYZ granice i cash-flow postoci.
+Pamte se u pregledniku (`localStorage`), a podaci kupca se i dalje ne spremaju.
+
 ## Špranca za unos
 
 Preuzima se s početne stranice (Excel i CSV). Drugi redak špranci opisuje što se dobiva uz svaki stupac. Počinje znakom `#`,

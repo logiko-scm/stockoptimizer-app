@@ -446,7 +446,7 @@ def izracunaj(df: pd.DataFrame, p: Parametri, upozorenja: list[str] | None = Non
            f"Gornji prag ({prag}) je " + ("zadan ručno" if p.cf_prag else "medijan (50. percentil) obrtaja artikala koji se vrte brže od 2, zaokružen na cijeli broj (najmanje 3)") +
            ". Postoci su procjena i mijenjaju se u pretpostavkama."]
           if ima_cf else []),
-        *(["GMROI = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: koliko eura bruto marže godišnje donosi euro uložen u zalihe."]
+        *(["ROI zaliha (u literaturi GMROI) = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: 1 euro uložen u zalihe daje toliko eura bruto marže godišnje."]
           if ima_marzu and ima_zalihu else []),
         "Status zalihe uspoređuje prosječnu zalihu sa sigurnosnom zalihom i EOQ-om; to je procjena, ne trenutno stanje.",
     ]
@@ -601,7 +601,7 @@ def izvezi_excel(rez: Rezultat, p: Parametri) -> bytes:
         "lt_dani": "Lead time (dani)", "lt_izvor": "Izvor lead timea", "z": "z",
         "sigurnosna": "Sigurnosna zaliha", "tocka_naruc": "Točka naručivanja", "eoq": "Količina po narudžbi", "eoq_izvor": "Način izračuna količine",
         "narudzbi_god": "Narudžbi god.", "trenutna": "Trenutna zaliha", "na_putu": "Na putu", "narudzba": "Za naručiti", "zaliha": "Prosječna zaliha", "obrtaj": "Obrtaj",
-        "dani_zalihe": "Dani zalihe", "vrijednost_zalihe": "Vrijednost zalihe (€)", "marza_pct": "Marža %", "gmroi": "GMROI",
+        "dani_zalihe": "Dani zalihe", "vrijednost_zalihe": "Vrijednost zalihe (€)", "marza_pct": "Marža %", "gmroi": "ROI zaliha",
         "abc_marza": "ABC po marži", "cf_realna": "Otkupna vrijednost (€)", "status": "Status",
     }
     stupci = {k: v for k, v in stupci.items() if k in a}
@@ -680,7 +680,7 @@ OPISI_STUPACA = [
     ("Mjesec 1 do 12", True, "Upišite koliko ste komada prodali u svakom od zadnjih 12 mjeseci (Mjesec 1 je najstariji). Iz toga aplikacija računa ABC/XYZ analizu, sigurnosnu zalihu, točku ponovnog naručivanja i količinu po jednoj narudžbi."),
     ("Dobavljač", False, "Ako upišete dobavljača, narudžbe se razdvajaju po dobavljaču, pa za svakog dobavljača dobijete zasebnu narudžbu. Cijelu analizu možete i filtrirati po dobavljaču."),
     ("Nabavna cijena", False, "Ako upišete nabavnu cijenu, aplikacija izražava zalihe i narudžbe u eurima (vrijednost zaliha, vrijednost narudžbe) i računa optimalnu količinu narudžbe prema EOQ metodi, a to je količina uz koju je ukupni trošak naručivanja i držanja zaliha najmanji. Uz prosječnu zalihu dobivate i cash-flow potencijal zaliha."),
-    ("Prodajna cijena", False, "Ako uz nabavnu cijenu upišete i prodajnu, aplikacija računa maržu svakog artikla i omogućuje ABC analizu po marži, što je posebno korisno trgovačkim tvrtkama. Uz prosječnu zalihu računa i GMROI, tj. koliko eura bruto marže godišnje donosi svaki euro uložen u zalihe."),
+    ("Prodajna cijena", False, "Ako uz nabavnu cijenu upišete i prodajnu, aplikacija računa maržu svakog artikla i omogućuje ABC analizu po marži, što je posebno korisno trgovačkim tvrtkama. Uz prosječnu zalihu računa i ROI zaliha (GMROI), tj. koliko eura bruto marže godišnje donosi svaki euro uložen u zalihe."),
     ("Prosječna zaliha", False, "Ako upišete prosječnu zalihu u zadnjih 12 mjeseci (u komadima), aplikacija računa koeficijent obrtaja i dane zalihe, prikazuje matricu zaliha uz usporedbu s prodajom i status svakog artikla. Ako imate samo zalihu u nekoliko točaka godine, upišite njihov prosjek."),
     ("Trenutna zaliha", False, "Ako upišete trenutnu zalihu (stanje u skladištu danas), aplikacija računa koliko treba naručiti ovaj tjedan. Bez nje dobijete samo sigurnosnu zalihu, točku naručivanja i količinu po jednoj narudžbi."),
     ("Na putu", False, "Ako upišete količine koje su već naručene, a još nisu stigle, aplikacija ih uzima u obzir i ne naručuje istu robu dvaput."),

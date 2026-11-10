@@ -28,7 +28,7 @@ Zadano: razine usluge A 98 % / B 95 % / C 90 %, S = 60 € po narudžbi, h = 20 
 
 - **ABC po prometu, marži ili količini:** prebacuje se u sučelju. Marža = prodajna − nabavna cijena (treba obje cijene), a artikli koji se
   prodaju ispod nabavne cijene idu u C.
-- **GMROI** = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: koliko eura bruto marže godišnje donosi euro uložen u zalihe.
+- **ROI zaliha** (u literaturi GMROI) = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: 1 euro uložen u zalihe daje toliko eura bruto marže godišnje.
   Prikazuje se po artiklu i za cijelu zalihu (treba obje cijene i prosječnu zalihu).
 - **Cash-flow potencijal zaliha (otkupna vrijednost zaliha):** koliko bi zalihe stvarno vrijedile da ih danas želite pretvoriti u
   gotovinu. Uvijek četiri kategorije prema koeficijentu obrtaja artikla: **do 1** (uključuje zalihu bez ikakve prodaje), **1 do 2**,

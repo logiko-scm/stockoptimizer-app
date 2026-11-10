@@ -51,7 +51,7 @@ class Parametri:
     drzanje_postotak: float = 20.0  # h, % nabavne cijene godišnje (H = h * nabavna)
     lead_time_default: float = 21.0  # dani, kad izvoz nema lead time
     cf_faktori: tuple = (30, 70, 85, 97)  # % otkupne vrijednosti zalihe: do 1 (uklj. bez prodaje) | 1 do 2 | 2 do praga | preko praga (procjena)
-    cf_prag: float | None = None  # gornji prag; None = zaokruženi medijan obrtaja, ali najmanje 3 i najviše 5
+    cf_prag: float | None = None  # gornji prag; None = automatski (medijan obrtaja artikala koji se vrte brže od 2, zaokružen, najmanje 3)
     pokrivenost_tjedana: float = 4.0  # količina po narudžbi kad nema nabavne cijene (EOQ nije moguć)
     abc_a: float = 80.0
     abc_b: float = 95.0
@@ -63,17 +63,21 @@ class Parametri:
         return z_vrijednost(razina)
 
 
-CF_PRAG_MIN, CF_PRAG_MAX = 3, 5
+CF_PRAG_MIN = 3
 
 
 def cf_prag(obrtaji: pd.Series, zadano: float | None = None) -> int:
-    """Gornji prag cash-flow kategorija: zaokruženi medijan obrtaja artikala koji se prodaju, najmanje 3, najviše 5."""
+    """Gornji prag cash-flow kategorija.
+
+    Prve dvije kategorije su uvijek 'do 1' i '1 do 2'. Artikle koji se vrte brže od 2 dijelimo na dva dijela po percentilu:
+    prag je medijan (50. percentil) njihova obrtaja, zaokružen na cijeli broj, ali najmanje 3.
+    """
     if zadano:
         return int(round(zadano))
-    med = obrtaji.median()
-    if pd.isna(med):
+    brzi = obrtaji[obrtaji > 2]
+    if brzi.empty:
         return CF_PRAG_MIN
-    return int(min(CF_PRAG_MAX, max(CF_PRAG_MIN, np.floor(med + 0.5))))
+    return int(max(CF_PRAG_MIN, np.floor(brzi.median() + 0.5)))
 
 
 def cf_pojasi(prag: int) -> list[str]:
@@ -412,7 +416,7 @@ def izracunaj(df: pd.DataFrame, p: Parametri, upozorenja: list[str] | None = Non
     uskl = _uskladjenost(a, ima_zalihu, ima_cijene)
     saz = _sazetak(a, uskl, p, ima_cijene, ima_zalihu, abc_osnova)
     saz["ima_marzu"] = ima_marzu
-    saz["cashflow"] = _cashflow(a, p, prag, float(o[prodaje_se].median()) if prodaje_se.any() else None) if ima_cf else None
+    saz["cashflow"] = _cashflow(a, p, prag, float(o[prodaje_se & (o > 2)].median()) if (prodaje_se & (o > 2)).any() else None) if ima_cf else None
     gm_pod = a["gmroi"].notna()
     saz["gmroi"] = (float(a.loc[gm_pod, "marza_god"].sum() / a.loc[gm_pod, "vrijednost_zalihe"].sum())
                     if gm_pod.any() and a.loc[gm_pod, "vrijednost_zalihe"].sum() > 0 else None)
@@ -439,7 +443,7 @@ def izracunaj(df: pd.DataFrame, p: Parametri, upozorenja: list[str] | None = Non
         *([f"Cash-flow potencijal (otkupna vrijednost zaliha): koliko bi zalihe stvarno vrijedile da ih danas želite pretvoriti u gotovinu. "
            f"Vrijednost zalihe po nabavnoj cijeni množi se postotkom prema koeficijentu obrtaja, u četiri kategorije: "
            f"{', '.join(f'{l}: {f:g}%' for l, f in zip(cf_pojasi(prag), p.cf_faktori))}. Zaliha bez ikakve prodaje ulazi u prvu kategoriju. "
-           f"Gornji prag ({prag}) je " + ("zadan ručno" if p.cf_prag else "zaokruženi medijan obrtaja vaših artikala (najmanje 3, najviše 5)") +
+           f"Gornji prag ({prag}) je " + ("zadan ručno" if p.cf_prag else "medijan (50. percentil) obrtaja artikala koji se vrte brže od 2, zaokružen na cijeli broj (najmanje 3)") +
            ". Postoci su procjena i mijenjaju se u pretpostavkama."]
           if ima_cf else []),
         *(["GMROI = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: koliko eura bruto marže godišnje donosi euro uložen u zalihe."]

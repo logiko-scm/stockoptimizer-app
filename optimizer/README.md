@@ -13,8 +13,8 @@ Gumb "Isprobaj s primjerom" pokreće analizu na izmišljenim podacima, bez učit
 
 | Veličina | Formula |
 |---|---|
-| ABC | kumulativni godišnji promet (količina × prodajna cijena): A do 80 %, B do 95 %, C ostalo |
-| XYZ | koeficijent varijacije 12 mjeseci: X ≤ 0,5, Y ≤ 1,0, Z iznad |
+| ABC | raspodjela godišnjeg prometa (količina × prodajna cijena): zadano **80 / 15 / 5**, tj. A čini 80 % prometa, B sljedećih 15 %, C preostalih 5 % (u kodu kumulativne granice 80 i 95) |
+| XYZ | koeficijent varijacije 12 mjeseci: X do 0,5, Y od 0,5 do 1, Z preko 1 |
 | Sigurnosna zaliha | `z × σD × √(LT / horizont)`, horizont = 30 dana (σD je mjesečna): vremenski faktor je `√(LT/30)`; bez varijabilnosti roka isporuke (donja granica) |
 | Točka naručivanja | `D/dan × LT + sigurnosna zaliha` |
 | EOQ | `√(2 · D · S / H)`, `H = h × nabavna cijena`; zaokruženo na MOQ i pakiranje |
@@ -32,8 +32,9 @@ Zadano: razine usluge A 98 % / B 95 % / C 90 %, S = 60 € po narudžbi, h = 20 
   Prikazuje se po artiklu i za cijelu zalihu (treba obje cijene i prosječnu zalihu).
 - **Cash-flow potencijal zaliha (otkupna vrijednost zaliha):** koliko bi zalihe stvarno vrijedile da ih danas želite pretvoriti u
   gotovinu. Uvijek četiri kategorije prema koeficijentu obrtaja artikla: **do 1** (uključuje zalihu bez ikakve prodaje), **1 do 2**,
-  **2 do X** i **preko X**. Gornji prag X je zaokruženi medijan obrtaja artikala koji se prodaju, ali najmanje 3 i najviše 5
-  (može se zadati ručno), pa su kategorije uvijek cijeli brojevi i prilagođene firmi. Vrijednost zalihe (po nabavnoj cijeni) množi se
+  **2 do X** i **preko X**. Kategorije do 1 i 1 do 2 su uvijek iste, a artikle koji se vrte brže od 2 dijelimo na dva dijela po
+  percentilu: gornji prag X je **medijan (50. percentil) obrtaja tih bržih artikala**, zaokružen na cijeli broj (najmanje 3; može se zadati ručno).
+  Tako su gornje dvije kategorije uvijek podjednako popunjene, a granice su cijeli brojevi. Vrijednost zalihe (po nabavnoj cijeni) množi se
   postotkom kategorije. Zadani postoci su 30 / 70 / 85 / 97 % i **samo su procjena**; mijenjaju se u Pretpostavkama
   (u kodu: `Parametri.cf_faktori`, `Parametri.cf_prag`). U sučelju je prvo rezultat (zaokružen) i rečenica o glavnom nalazu,
   a tablica je u rasklopljenom odjeljku "Kako smo to izračunali".

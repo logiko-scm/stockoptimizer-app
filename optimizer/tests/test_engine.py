@@ -254,12 +254,14 @@ def test_cashflow_cetiri_kategorije_i_faktori():
     assert r2.sazetak["cashflow"]["realna"] == pytest.approx(0.5 * 1200 + 0 * 1200 + 0)
 
 
-def test_gornji_prag_cashflowa_je_zaokruzeni_medijan_od_3_do_5():
+def test_gornji_prag_cashflowa_je_percentil_obrtaja_brzih_artikala():
     from engine import cf_prag, cf_pojasi
     s = lambda *v: pd.Series(v, dtype=float)
-    assert cf_prag(s(0.6, 1.2, 2.0)) == 3          # spora firma: najmanje 3
-    assert cf_prag(s(3.6, 3.8, 4.2)) == 4          # medijan 3,8 -> 4
-    assert cf_prag(s(8, 12, 30)) == 5              # brza firma: najviše 5
+    assert cf_prag(s(0.6, 1.2, 2.0)) == 3          # nema artikala brzih od 2: najmanje 3
+    assert cf_prag(s(3.6, 3.8, 4.2)) == 4          # medijan brzih = 3,8 -> 4
+    assert cf_prag(s(0.5, 1.5, 3.6, 3.8, 4.2)) == 4  # sporiji artikli (do 2) ne ulaze u izračun praga
+    assert cf_prag(s(8, 12, 30)) == 12             # brza firma: prag prati podatke, bez gornje granice
+    assert cf_prag(s(2.2, 2.4)) == 3               # medijan 2,3 -> zaokruženo 2, ali najmanje 3
     assert cf_prag(pd.Series([], dtype=float)) == 3
     assert cf_prag(s(1, 2), zadano=6) == 6         # ručno zadan prag
     assert cf_pojasi(4) == ["do 1", "1 do 2", "2 do 4", "preko 4"]

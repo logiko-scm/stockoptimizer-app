@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StockOptimizer – analiza i narudžba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b0c; --panel:#151517; --panel2:#1d1d20; --line:#2b2b30;
+  --text:#f2f2f3; --muted:#a2a2aa; --accent:#ff8a3d; --accent-d:#e55a00;
+  --ok:#3ecf8e; --warn:#f5c542; --bad:#ff5d5d;
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 16px 80px}
+h1,h2{font-family:Poppins,system-ui,sans-serif;font-weight:600;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(1.6rem,4vw,2.4rem);line-height:1.15}
+h2{font-size:1.1rem;color:var(--accent);margin-bottom:12px}
+.lead{color:var(--muted);margin:10px 0 24px;max-width:680px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:.15s;display:block}
+.drop:hover,.drop.on{border-color:var(--accent);background:var(--panel2)}
+.drop strong{display:block;font-size:1.05rem}
+.drop span{color:var(--muted);font-size:.9rem}
+.drop input{display:none}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px}
+.step{background:var(--panel2);border-radius:10px;padding:14px}
+.step b{display:block;color:var(--accent);font-size:.95rem}
+.step>span{color:var(--muted);font-size:.82rem;display:block;margin-top:2px}
+.link{color:var(--accent);text-decoration:none;font-size:.9rem}
+.link:hover{text-decoration:underline}
+details summary{cursor:pointer;color:var(--muted);font-size:.92rem;padding:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:12px}
+label{display:block;font-size:.8rem;color:var(--muted)}
+label small{display:block;font-size:.72rem;color:#7b7b84;margin-top:2px;line-height:1.3}
+input[type=number],input[type=search],select{width:100%;margin-top:4px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:9px 10px;font:inherit;font-size:.9rem}
+input:focus,select:focus,button:focus-visible,.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button,.btn{background:var(--accent-d);color:#fff;border:0;border-radius:10px;padding:12px 22px;font:600 .95rem Poppins,sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{background:var(--accent)}
+button:disabled{opacity:.5;cursor:wait}
+.ghost{background:transparent!important;border:1px solid var(--line);color:var(--text)}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.err{background:#2a1313;border:1px solid var(--bad);color:#ffd2d2;border-radius:10px;padding:12px 14px;margin:14px 0}
+.warn{background:#2a2410;border:1px solid #6d5a16;color:#f3e3a6;border-radius:10px;padding:8px 14px;margin:6px 0;font-size:.86rem}
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.stat{background:var(--panel2);border-radius:10px;padding:16px}
+.stat b{display:block;font-size:1.8rem;color:var(--accent);line-height:1.1}
+.stat span{color:var(--muted);font-size:.82rem}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th{font-weight:500;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);white-space:nowrap}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--text)}
+td{padding:7px 8px;border-bottom:1px solid #212125;vertical-align:top;white-space:nowrap}
+.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th.n{text-align:right}
+.scroll{overflow-x:auto;max-height:560px}
+.sup{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:var(--panel)}
+.sup>summary{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;color:var(--text);font-weight:500}
+.sup>summary span{color:var(--muted);font-weight:400}
+.sup .scroll{padding:0 14px 12px}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 20px}
+.view{background:var(--panel);border:1px solid var(--line);color:var(--muted);text-align:left;padding:14px 18px;border-radius:12px}
+.view b{display:block;color:var(--text);font-size:1rem}
+.view span{font-size:.8rem;font-weight:400}
+.view[aria-pressed=true]{border-color:var(--accent);background:var(--panel2)}
+.view[aria-pressed=true] b{color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{background:transparent;color:var(--muted);border:0;border-radius:0;padding:7px 14px;font-size:.82rem;font-weight:500}
+.seg button[aria-pressed=true]{background:var(--accent-d);color:#fff}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+.ctl{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end}
+.ctl>div>small{display:block;color:var(--muted);font-size:.72rem;margin-bottom:4px}
+.mxgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:22px 28px}
+@media(max-width:520px){.mxgrid{grid-template-columns:1fr}}
+.mxbox h3{margin:0 0 8px;font-size:.92rem;font-weight:600}
+.mxbox h3 small{color:var(--muted);font-weight:400}
+table.mx{table-layout:fixed;border-collapse:separate;border-spacing:4px;font-size:.82rem}
+table.mx th:first-child{width:28px}
+table.mx th:last-child,table.mx td.tot{width:96px}
+table.mx th{background:none;position:static;text-align:center;padding:4px;border:0}
+table.mx th.rh{cursor:pointer}
+table.mx th.ch{cursor:pointer}
+table.mx th.rh:hover,table.mx th.ch:hover{color:var(--accent)}
+table.mx td{padding:0;border:0}
+table.mx .cell{width:100%;background:var(--panel2);color:var(--text);border-radius:8px;padding:10px 4px;font:500 .82rem Poppins,sans-serif;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.mx .cell:hover{outline:1px solid var(--accent)}
+table.mx .cell.sel{outline:2px solid var(--accent)}
+table.mx td.tot{color:var(--muted);text-align:center;vertical-align:middle;white-space:nowrap;font-size:.78rem;font-variant-numeric:tabular-nums;padding:0 2px}
+table.mx td{vertical-align:middle}
+table.mx .cell.stock{box-shadow:inset 0 0 0 2px var(--bad);background:#2b1414}
+table.mx .cell.cap{box-shadow:inset 0 0 0 2px var(--warn);background:#2b2410}
+table.mx .cell.mild{background:#222226}
+.note{color:var(--muted);font-size:.8rem}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--accent);color:var(--text);border-radius:999px;padding:3px 12px;font-size:.8rem;cursor:pointer}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.74rem;border:1px solid var(--line);white-space:nowrap}
+.tag.Uredno{color:var(--ok);border-color:var(--ok)}
+.tag.Rizik{color:var(--bad);border-color:var(--bad)}
+.tag.Višak,.tag.Ozbiljan,.tag.Nema{color:var(--warn);border-color:var(--warn)}
+ul.plain{padding-left:18px;color:var(--muted);font-size:.88rem}
+.xl{overflow-x:auto;margin-top:8px}
+.xl table{width:auto;min-width:100%;border-collapse:separate;border-spacing:0;font-size:.78rem;background:#fff1;border:1px solid var(--line);border-radius:8px}
+.xl th,.xl td{padding:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);white-space:nowrap}
+.xl td{padding:6px 10px;color:#7b7b84;font-variant-numeric:tabular-nums}
+.xl .xh{display:flex;align-items:center;gap:8px;width:100%;background:#2a2a2e;color:var(--text);border:0;border-radius:0;padding:8px 10px;font:500 .78rem Poppins,sans-serif;text-align:left;cursor:pointer}
+.xl .xh.req{background:#4a2b12}
+.xl .xh:hover,.xl .xh.on{background:var(--accent-d);color:#fff}
+.xl .ic{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid currentColor;font-size:.66rem;font-style:italic;font-family:Georgia,serif;opacity:.85}
+.xlinfo{background:var(--panel2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:12px 16px;margin-top:10px;font-size:.88rem;min-height:3.2rem}
+.xlinfo b{color:var(--accent)}
+.xlinfo .tag{margin-left:8px}
+.hidden{display:none!important}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);max-width:min(560px,calc(100vw - 32px));background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.88rem;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:50}
+footer{color:#6c6c75;font-size:.78rem;margin-top:40px}
+@media(max-width:600px){.wrap{padding-top:20px}.views{grid-template-columns:1fr}}
+
+/* ---- nova struktura: jedan ekran u trenutku ---- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:16px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.brand{font-family:Poppins,system-ui,sans-serif;font-weight:600;color:var(--accent);font-size:1.05rem;letter-spacing:-.005em}
+.stepper{display:flex;align-items:center;gap:4px}
+.stp{background:transparent;border:0;color:var(--muted);padding:6px 12px;border-radius:999px;font:500 .84rem Poppins,sans-serif}
+.stp[aria-current=step]{background:var(--accent-d);color:#fff}
+.stp:disabled{opacity:.38;cursor:default}
+.stp:disabled:hover{background:transparent}
+.stp:not(:disabled):not([aria-current=step]):hover{background:var(--panel2);color:var(--text)}
+.sep{color:#55555c}
+.gear{background:transparent;border:1px solid var(--line);color:var(--text);padding:8px 14px;font-size:.85rem;font-weight:500}
+.gear:hover{border-color:var(--accent);color:var(--accent);background:transparent}
+.small{padding:8px 16px!important;font-size:.82rem!important}
+#scrStart{max-width:720px;margin:48px auto 0;text-align:center}
+#scrStart .lead{margin-left:auto;margin-right:auto}
+#scrStart .drop{padding:56px 20px}
+#scrStart .drop.ima{border-style:solid;border-color:var(--accent)}
+.quiet{color:var(--muted);font-size:.88rem;margin:16px 0 0}
+.quiet a{color:var(--accent)}
+.lnk{background:none;border:0;color:var(--accent);padding:0;font:inherit;text-decoration:underline;cursor:pointer;border-radius:0}
+.lnk:hover{background:none;color:var(--text)}
+.big{padding:15px 34px;font-size:1.02rem;margin-top:22px}
+.between{justify-content:space-between}
+.naslov{font-family:Poppins,system-ui,sans-serif;font-weight:600;font-size:1.45rem;letter-spacing:-.01em;margin:0;color:var(--text)}
+.tabs{display:flex;gap:6px;margin:4px 0 16px;flex-wrap:wrap}
+.tabbtn{background:transparent;border:1px solid var(--line);color:var(--muted);padding:8px 20px;border-radius:999px;font-size:.88rem;font-weight:500}
+.tabbtn:hover{background:transparent;color:var(--text);border-color:#44444a}
+.tabbtn[aria-selected=true]{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
+.more{margin-top:12px}
+.more>summary{color:var(--accent);font-size:.84rem}
+.more .ctl{margin-top:10px}
+.napomene{margin:0 0 14px}
+.napomene>summary{display:inline-block;color:var(--warn);font-size:.84rem;border:1px solid #6d5a16;border-radius:999px;padding:3px 12px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.74);display:grid;place-items:center;padding:16px;z-index:60;overflow:auto}
+.ovbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:980px;width:100%;max-height:92vh;overflow:auto}
+.akcije{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">StockOptimizer</div>
+    <nav class="stepper" aria-label="Koraci">
+      <button type="button" class="stp" id="st1" aria-current="step">1 · Podaci</button><span class="sep">›</span>
+      <button type="button" class="stp" id="st2" disabled>2 · Analiza</button><span class="sep">›</span>
+      <button type="button" class="stp" id="st3" disabled>3 · Narudžba</button>
+    </nav>
+    <button type="button" class="gear" id="btnPostavke">⚙ Postavke</button>
+  </header>
+  <!--BANNER-->
+
+  <!-- EKRAN 1: PODACI -->
+  <main id="scrStart" class="screen">
+    <h1>Analiza zaliha i narudžba</h1>
+    <p class="lead">Učitajte izvoz iz ERP-a i dobit ćete pregled zaliha i količine koje treba naručiti. Podaci se ne spremaju.</p>
+    <label class="drop" id="drop" tabindex="0">
+      <input type="file" id="datoteka" name="datoteka" accept=".xlsx,.xls,.csv">
+      <strong id="imeDatoteke">Povucite izvoz ovdje ili kliknite za odabir</strong>
+      <span>Excel ili CSV</span>
+    </label>
+    <button type="button" class="big hidden" id="gumb">Analiziraj</button>
+    <div id="greska" class="err hidden" role="alert"></div>
+    <p class="quiet">Nemate pripremljenu datoteku? Preuzmite šprancu: <a href="/api/predlozak.xlsx">Excel</a> · <a href="/api/predlozak.csv">CSV</a> · <button type="button" class="lnk" id="btnSpranca">što mora biti u njoj?</button></p>
+    <p class="quiet">ili <button type="button" class="lnk" id="gumbDemo">isprobajte s primjerom</button></p>
+  </main>
+
+  <!-- EKRAN 2: ANALIZA -->
+  <main id="scrAnaliza" class="screen hidden">
+    <div class="row between" style="margin:18px 0 14px">
+      <h2 class="naslov">Analiza zaliha</h2>
+      <button type="button" class="ghost btn small" id="dlXls">Preuzmi Excel</button>
+    </div>
+    <div id="upozorenja"></div>
+    <section class="card" id="nalaz"></section>
+
+    <div class="tabs" role="tablist" aria-label="Prikaz analize">
+      <button type="button" class="tabbtn" role="tab" data-t="matrice" aria-selected="true">Matrice</button>
+      <button type="button" class="tabbtn" role="tab" data-t="artikli" aria-selected="false">Artikli</button>
+      <button type="button" class="tabbtn" role="tab" data-t="cf" aria-selected="false">Cash-flow</button>
+    </div>
+
+    <section id="tabMatrice">
+      <div class="card">
+        <div class="ctl">
+          <div><small>Mjera</small><div class="seg" id="segMjera">
+            <button type="button" data-v="vrijednost">Vrijednost (€)</button>
+            <button type="button" data-v="kolicina">Količina</button>
+            <button type="button" data-v="broj">Broj artikala</button></div></div>
+          <div><small>Prikaz</small><div class="seg" id="segPrikaz">
+            <button type="button" data-v="abs">Apsolutno</button>
+            <button type="button" data-v="pct">Postotak</button></div></div>
+        </div>
+        <details class="more">
+          <summary>Više opcija</summary>
+          <div class="ctl">
+            <div><small>ABC analiza po</small><div class="seg" id="segOsnova">
+              <button type="button" data-v="promet">Prometu</button>
+              <button type="button" data-v="marza">Marži</button>
+              <button type="button" data-v="kolicina">Količini</button></div></div>
+            <div id="dobWrap"><small>Dobavljač</small><select id="fDob" aria-label="Dobavljač"></select></div>
+          </div>
+          <p class="note" id="abcNote" style="margin:10px 0 0"></p>
+        </details>
+      </div>
+      <div class="card">
+        <div class="mxgrid" id="matrice"></div>
+        <p class="note" style="margin:12px 0 0">Kliknite polje (npr. AX) da vidite artikle u njemu. Odstupanje: <span style="color:var(--bad)">crveno</span> = zalihe manje od prodaje (rizik manjka), <span style="color:var(--warn)">žuto</span> = zalihe veće od prodaje (vezan novac).</p>
+      </div>
+    </section>
+
+    <section id="tabArtikli" class="hidden">
+      <div class="card">
+        <div class="row between" style="margin-bottom:10px">
+          <div class="row"><span id="brojArt" class="note"></span><span id="chips"></span></div>
+          <div class="row">
+            <input type="search" id="fQ" placeholder="Pretraži šifru ili naziv" style="margin:0;min-width:210px" aria-label="Pretraži artikl">
+            <button type="button" class="ghost btn small" id="dlPrikaz">Preuzmi prikazano (CSV)</button>
+          </div>
+        </div>
+        <div class="scroll"><table id="tab"></table></div>
+        <div class="row between" style="margin-top:10px">
+          <span id="strInfo" class="note"></span>
+          <span class="row"><button type="button" class="ghost btn" id="pPrev" style="padding:6px 14px">‹ Prethodna</button><button type="button" class="ghost btn" id="pNext" style="padding:6px 14px">Sljedeća ›</button></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="tabCf" class="hidden"><div class="card" id="cfCard"></div></section>
+
+    <div class="akcije"><button type="button" id="naNarudzbu">Dalje: količine za narudžbu →</button></div>
+  </main>
+
+  <!-- EKRAN 3: NARUDŽBA -->
+  <main id="scrNarudzba" class="screen hidden">
+    <div class="row between" style="margin:18px 0 14px"><h2 class="naslov">Narudžba</h2></div>
+    <section class="card" id="hero"></section>
+    <div id="dobavljaci"></div>
+    <div class="akcije"><button type="button" class="ghost btn" id="natrag">← Natrag na analizu</button></div>
+  </main>
+
+  <!-- EKRAN: POSTAVKE -->
+  <main id="scrPostavke" class="screen hidden">
+    <div class="row between" style="margin:18px 0 6px"><h2 class="naslov">Postavke</h2><button type="button" class="ghost btn small" id="postNatrag">← Natrag</button></div>
+    <p class="lead" style="margin-top:6px">Zadane vrijednosti odgovaraju većini firmi. Mijenjajte ih samo ako znate zašto. Postavke se pamte u vašem pregledniku, a vaši podaci i dalje se ne spremaju.</p>
+    <div id="postavkeSadrzaj"></div>
+    <details class="card" id="metodBox"><summary>Na čemu počiva izračun</summary><ul class="plain" id="pretpostavke"></ul></details>
+    <div id="greskaPost" class="err hidden" role="alert"></div>
+    <div class="akcije"><button type="button" id="postPrimijeni">Spremi</button><button type="button" class="ghost btn" id="postZadano">Vrati zadano</button></div>
+  </main>
+
+  <!-- PREGLED ŠPRANCE (otvara se na zahtjev) -->
+  <div id="ovSpranca" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Što mora biti u datoteci">
+    <div class="ovbox">
+      <div class="row between"><h2 style="margin:0">Što mora biti u datoteci</h2><button type="button" class="ghost btn small" id="ovZatvori">Zatvori ✕</button></div>
+      <p class="note" style="margin:10px 0 0"><b style="color:var(--accent)">Obavezno su samo šifra artikla i količine prodaje za zadnjih 12 mjeseci</b> (narančasti stupci). Sivi stupci su neobavezni, a svaki otključava dodatne rezultate. Kliknite stupac za objašnjenje.</p>
+      <div class="xl" id="xl" aria-label="Pregled špranci"></div>
+      <div class="xlinfo" id="xlinfo" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden" role="status" aria-live="polite"></div>
+  <footer>StockOptimizer · Logiko d.o.o. · Ovo je nacrt politike zaliha, ne usvojena politika: razinu usluge, odobravanje odstupanja i vlasništvo nad rokom isporuke određujete vi.</footer>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v, d = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("hr-HR", {minimumFractionDigits: d, maximumFractionDigits: d});
+const eur = (v) => v == null ? "–" : fmt(v, 0) + " €";
+
+const S = {ekran: "start", prije: "start", tab: "matrice", d: null, demo: false, osnova: "promet", mjera: "vrijednost", prikaz: "abs", abc: null, xyz: null, dob: "", q: "", sort: {k: "promet", dir: -1}, page: 0, PER: 100};
+const inp = $("#datoteka"), drop = $("#drop");
+
+/* ---------- učitavanje ---------- */
+inp.addEventListener("change", () => { S.demo = false; $("#imeDatoteke").textContent = inp.files[0] ? inp.files[0].name : "Povucite izvoz ovdje ili kliknite za odabir"; $("#gumb").classList.toggle("hidden", !inp.files[0]); drop.classList.toggle("ima", !!inp.files[0]); pokaziGresku(""); });
+drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inp.click(); } });
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("on"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("on"); }));
+drop.addEventListener("drop", (e) => { if (e.dataTransfer.files.length) { inp.files = e.dataTransfer.files; inp.dispatchEvent(new Event("change")); } });
+
+function poruka(t) { const el = $("#toast"); el.textContent = t || ""; el.classList.toggle("hidden", !t); }
+function pokaziGresku(m) { ["#greska", "#greskaPost"].forEach((id) => { const g = $(id); g.textContent = m; g.classList.toggle("hidden", !m); }); }
+function podaci() {
+  const fd = new FormData();
+  if (S.demo) fd.set("demo", "1"); else if (inp.files[0]) fd.append("datoteka", inp.files[0]);
+  document.querySelectorAll("#postavkeSadrzaj input").forEach((i) => { if (i.value !== "") fd.set(i.name, i.value); });
+  const A = parseFloat(fd.get("abc_a")), B = parseFloat(fd.get("abc_b_udio"));
+  if (!isNaN(A) && !isNaN(B)) fd.set("abc_b", String(A + B));   // poslužitelj traži kumulativnu granicu (A + B)
+  return fd;
+}
+
+async function pokreni(demo) {
+  pokaziGresku("");
+  S.demo = demo;
+  if (!demo && !inp.files[0]) { pokaziGresku("Odaberite datoteku s izvozom ili isprobajte primjer."); return; }
+  $("#gumb").disabled = $("#gumbDemo").disabled = true; poruka("Računam…");
+  const spor = setTimeout(() => poruka("Poslužitelj se budi nakon stanke, to traje do minutu. Pripremamo analizu, hvala na strpljenju…"), 4000);
+  try {
+    const r = await fetch("/api/analiziraj", {method: "POST", body: podaci()});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.greska || "Došlo je do pogreške.");
+    if (demo) $("#imeDatoteke").textContent = "Primjer s izmišljenim podacima (40 artikala)";
+    start(d);
+  } catch (err) { pokaziGresku(err.message); if (S.ekran !== "postavke") ekran("start"); }
+  finally { clearTimeout(spor); $("#gumb").disabled = $("#gumbDemo").disabled = false; poruka(""); }
+}
+$("#gumb").addEventListener("click", () => pokreni(false));
+$("#gumbDemo").addEventListener("click", () => pokreni(true));
+
+async function preuzmi(url, ime) {
+  poruka("Pripremam datoteku…");
+  const spor = setTimeout(() => poruka("Poslužitelj se budi nakon stanke, to traje do minutu…"), 4000);
+  let r;
+  try { r = await fetch(url, {method: "POST", body: podaci()}); } finally { clearTimeout(spor); poruka(""); }
+  if (!r.ok) { pokaziGresku((await r.json()).greska || "Preuzimanje nije uspjelo."); return; }
+  skini(await r.blob(), ime);
+}
+function skini(blob, ime) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ime; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+
+/* ---------- ekrani ---------- */
+const EKRANI = {start: "#scrStart", analiza: "#scrAnaliza", narudzba: "#scrNarudzba", postavke: "#scrPostavke"};
+function ekran(n) {
+  if (n === "postavke" && S.ekran !== "postavke") S.prije = S.ekran || "start";
+  S.ekran = n;
+  Object.entries(EKRANI).forEach(([k, sel]) => $(sel).classList.toggle("hidden", k !== n));
+  const aktivan = {start: "st1", analiza: "st2", narudzba: "st3"}[n];
+  ["st1", "st2", "st3"].forEach((id) => { const b = $("#" + id); if (id === aktivan) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  $("#st2").disabled = $("#st3").disabled = !S.d;
+  $("#btnPostavke").classList.toggle("hidden", n === "postavke");
+  $("#metodBox").classList.toggle("hidden", !S.d);
+  $("#postPrimijeni").textContent = S.d ? "Primijeni i izračunaj ponovno" : "Spremi";
+  window.scrollTo(0, 0);
+}
+function tab(t) {
+  S.tab = t;
+  [["matrice", "#tabMatrice"], ["artikli", "#tabArtikli"], ["cf", "#tabCf"]].forEach(([k, sel]) => $(sel).classList.toggle("hidden", k !== t));
+  document.querySelectorAll(".tabbtn").forEach((b) => b.setAttribute("aria-selected", b.dataset.t === t));
+}
+$("#st1").onclick = () => ekran("start"); $("#st2").onclick = () => ekran("analiza"); $("#st3").onclick = () => ekran("narudzba");
+$("#natrag").onclick = () => ekran("analiza");
+$("#naNarudzbu").onclick = () => ekran("narudzba");
+document.querySelectorAll(".tabbtn").forEach((b) => b.onclick = () => tab(b.dataset.t));
+$("#btnPostavke").onclick = () => ekran("postavke");
+$("#postNatrag").onclick = () => ekran(S.prije || "start");
+
+function start(d) {
+  S.d = d; S.abc = S.xyz = null; S.dob = ""; S.q = ""; S.page = 0; S.osnova = "promet";
+  const s = d.sazetak;
+  S.mjera = s.ima_cijene ? "vrijednost" : "kolicina";
+  $("#fQ").value = "";
+  $("#abcNote").textContent = "ABC analiza je zadano po: " + s.abc_osnova + ".";
+  const dobs = [...new Set(d.artikli.map((a) => a.dobavljac))].sort();
+  const imaDob = dobs.length > 1 || (dobs.length === 1 && dobs[0] !== "(svi artikli)");
+  $("#dobWrap").classList.toggle("hidden", !imaDob);
+  $("#fDob").innerHTML = `<option value="">Svi (${dobs.length})</option>` + dobs.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join("");
+  $("#upozorenja").innerHTML = d.upozorenja.length ? `<details class="napomene"><summary>⚠ Napomene o podacima (${d.upozorenja.length})</summary><div style="margin-top:8px">${d.upozorenja.map((u) => `<div class="warn">${esc(u)}</div>`).join("")}</div></details>` : "";
+  $("#pretpostavke").innerHTML = d.pretpostavke.map((p) => `<li>${esc(p)}</li>`).join("");
+  const stat = [];
+  if (s.vrijednost_zaliha != null) stat.push([eur(s.vrijednost_zaliha), "vrijednost zaliha"]);
+  if (s.obrtaj) stat.push([fmt(s.obrtaj, 1) + "×", `obrtaj zaliha godišnje (${fmt(s.dani_zalihe)} dana)`]);
+  if (s.gmroi != null) stat.push([fmt(s.gmroi, 2) + " €", `ROI zaliha: 1 euro uložen u zalihe daje ${fmt(s.gmroi, 2)} € bruto marže godišnje`]);
+  if (s.cashflow) stat.push([okr(s.cashflow.realna), "otkupna vrijednost zaliha (cash-flow potencijal)"]);
+  if (stat.length < 3) stat.unshift([fmt(s.broj_artikala), "artikala u analizi"]);
+  $("#nalaz").innerHTML = `<div class="hero">${stat.map(([b, t]) => `<div class="stat"><b>${b}</b><span>${t}</span></div>`).join("")}</div>
+    <p style="margin:14px 0 0">${s.recenice.map(esc).join(" ")}</p>`;
+  narudzbaView(d);
+  cashflowKartica(d);
+  render();
+  tab("matrice");
+  ekran("analiza");
+}
+
+/* ---------- filtri i izvedeni podaci ---------- */
+function osnovni() {
+  const q = S.q.trim().toLowerCase();
+  return S.d.artikli.filter((a) => (!S.dob || a.dobavljac === S.dob) && (!q || String(a.sifra).toLowerCase().includes(q) || String(a.naziv).toLowerCase().includes(q)));
+}
+function prikazani(base) { return base.filter((a) => (!S.abc || a._abc === S.abc) && (!S.xyz || a.xyz === S.xyz)); }
+
+function primijeniOsnovu() { S.d.artikli.forEach((a) => { a._abc = a["abc_" + S.osnova] || a.abc; a.klasa = a._abc + a.xyz; }); }
+function render() { primijeniOsnovu(); const base = osnovni(); matrice(base); tablica(prikazani(base)); }
+
+/* ---------- matrice ---------- */
+const MJERE = {
+  vrijednost: {zal: (a) => a.vrijednost_zalihe || 0, prod: (a) => a.promet || 0, f: (v) => fmt(v, 0) + " €"},
+  kolicina: {zal: (a) => a.zaliha || 0, prod: (a) => a.potraznja_god || 0, f: (v) => fmt(v, 0)},
+  broj: {zal: () => 1, prod: () => 1, f: (v) => fmt(v, 0)},
+};
+function agreg(rows, fn) {
+  const m = {A: {X: 0, Y: 0, Z: 0}, B: {X: 0, Y: 0, Z: 0}, C: {X: 0, Y: 0, Z: 0}};
+  rows.forEach((r) => { if (m[r._abc]) m[r._abc][r.xyz] += fn(r); });
+  return m;
+}
+const zbroj = (m) => "ABC".split("").reduce((t, a) => t + "XYZ".split("").reduce((u, x) => u + m[a][x], 0), 0);
+
+function tabMatrica(naslov, pod, m, fCell, klasa) {
+  const T = zbroj(m);
+  const redUk = (a) => "XYZ".split("").reduce((t, x) => t + m[a][x], 0);
+  const stUk = (x) => "ABC".split("").reduce((t, a) => t + m[a][x], 0);
+  let h = `<div class="mxbox"><h3>${naslov} <small>${pod}</small></h3><table class="mx"><thead><tr><th></th>${"XYZ".split("").map((x) => `<th class="ch" data-x="${x}" title="Filtriraj stupac ${x}">${x}</th>`).join("")}<th>Σ</th></tr></thead><tbody>`;
+  for (const a of "ABC") {
+    h += `<tr><th class="rh" data-a="${a}" title="Filtriraj redak ${a}">${a}</th>`;
+    for (const x of "XYZ") {
+      const k = klasa ? klasa(a, x, m[a][x], T) : "";
+      const sel = S.abc === a && S.xyz === x ? " sel" : "";
+      const sh = T ? m[a][x] / T : 0;
+      const bg = !klasa ? `style="background:rgba(255,138,61,${(Math.min(sh, 1) * .6).toFixed(2)})"` : "";
+      h += `<td><button type="button" class="cell ${k}${sel}" data-a="${a}" data-x="${x}" ${bg}>${fCell(m[a][x], T)}</button></td>`;
+    }
+    h += `<td class="tot">${fCell(redUk(a), T)}</td></tr>`;
+  }
+  h += `<tr><th>Σ</th>${"XYZ".split("").map((x) => `<td class="tot">${fCell(stUk(x), T)}</td>`).join("")}<td class="tot"><b>${fCell(T, T)}</b></td></tr></tbody></table></div>`;
+  return h;
+}
+
+function matrice(base) {
+  const s = S.d.sazetak, M = MJERE[S.mjera];
+  const imaZal = s.ima_zalihu && (S.mjera !== "vrijednost" || s.ima_cijene);
+  const pct = S.prikaz === "pct";
+  const fC = (v, T) => pct ? (T ? fmt(v / T * 100, 1) + "%" : "–") : M.f(v);
+  const zal = agreg(base, M.zal), pro = agreg(base, M.prod);
+  const mjeraNaziv = {vrijednost: "vrijednost u €", kolicina: "količina", broj: "broj artikala"}[S.mjera];
+  let h = imaZal ? tabMatrica("Zalihe", mjeraNaziv, zal, fC) : `<div class="mxbox"><h3>Zalihe</h3><p class="note">Za matricu zaliha izvoz treba stupac <b>Prosječna zaliha</b> (ili Trenutna zaliha)${S.mjera === "vrijednost" && !s.ima_cijene ? " i nabavnu cijenu za prikaz u eurima" : ""}.</p></div>`;
+  h += tabMatrica("Prodaja", (S.mjera === "vrijednost" ? "promet u € (godišnje)" : S.mjera === "kolicina" ? "količina (godišnje)" : "broj artikala"), pro, fC);
+  if (imaZal && S.mjera !== "broj") {
+    const Tz = zbroj(zal), Tp = zbroj(pro);
+    const dev = {A: {}, B: {}, C: {}}, up = {A: {}, B: {}, C: {}};
+    for (const a of "ABC") for (const x of "XYZ") { const z = Tz ? zal[a][x] / Tz * 100 : 0, p = Tp ? pro[a][x] / Tp * 100 : 0; dev[a][x] = z - p; up[a][x] = [z, p]; }
+    const kl = (a, x, v) => { const [z, p] = up[a][x]; if (a === "A" && p > 0 && z < .8 * p) return "stock"; return v <= -5 ? "stock" : v >= 5 ? "cap" : v <= -2 || v >= 2 ? "mild" : ""; };
+    h += tabMatrica("Odstupanje", "zalihe − prodaja, postotni bodovi", dev, (v) => (v > 0 ? "+" : "") + fmt(v, 1), kl);
+  }
+  $("#matrice").innerHTML = h;
+  $("#matrice").querySelectorAll(".cell").forEach((b) => b.onclick = () => { const a = b.dataset.a, x = b.dataset.x; if (S.abc === a && S.xyz === x) S.abc = S.xyz = null; else { S.abc = a; S.xyz = x; } S.page = 0; render(); if (S.abc) tab("artikli"); });
+  $("#matrice").querySelectorAll("th.rh").forEach((t) => t.onclick = () => { S.abc = S.abc === t.dataset.a && !S.xyz ? null : t.dataset.a; S.xyz = null; S.page = 0; render(); if (S.abc) tab("artikli"); });
+  $("#matrice").querySelectorAll("th.ch").forEach((t) => t.onclick = () => { S.xyz = S.xyz === t.dataset.x && !S.abc ? null : t.dataset.x; S.abc = null; S.page = 0; render(); if (S.xyz) tab("artikli"); });
+  document.querySelectorAll("#segOsnova button").forEach((b) => { b.setAttribute("aria-pressed", b.dataset.v === S.osnova); if (b.dataset.v === "marza") b.disabled = !s.ima_marzu; });
+  document.querySelectorAll("#segMjera button").forEach((b) => { b.setAttribute("aria-pressed", b.dataset.v === S.mjera); if (b.dataset.v === "vrijednost") b.disabled = !s.ima_cijene; });
+  document.querySelectorAll("#segPrikaz button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === S.prikaz));
+}
+document.querySelectorAll("#segMjera button").forEach((b) => b.onclick = () => { S.mjera = b.dataset.v; render(); });
+document.querySelectorAll("#segOsnova button").forEach((b) => b.onclick = () => { S.osnova = b.dataset.v; S.abc = S.xyz = null; S.page = 0; render(); });
+document.querySelectorAll("#segPrikaz button").forEach((b) => b.onclick = () => { S.prikaz = b.dataset.v; render(); });
+$("#fDob").onchange = (e) => { S.dob = e.target.value; S.page = 0; render(); };
+let tq; $("#fQ").oninput = (e) => { clearTimeout(tq); tq = setTimeout(() => { S.q = e.target.value; S.page = 0; render(); }, 180); };
+
+/* ---------- popis artikala ---------- */
+const STUPCI = [
+  {k: "sifra", t: "Šifra"}, {k: "naziv", t: "Naziv"}, {k: "dobavljac", t: "Dobavljač"}, {k: "klasa", t: "Klasa"},
+  {k: "potraznja_god", t: "Prodaja god.", n: 1}, {k: "promet", t: "Promet", n: 1, d: 0},
+  {k: "zaliha", t: "Prosj. zaliha", n: 1}, {k: "vrijednost_zalihe", t: "Vrijed. zalihe €", n: 1},
+  {k: "obrtaj", t: "Obrtaj", n: 1, d: 1}, {k: "dani_zalihe", t: "Dani zalihe", n: 1},
+  {k: "marza_pct", t: "Marža %", n: 1, d: 1}, {k: "gmroi", t: "ROI zaliha", n: 1, d: 2}, {k: "cf_realna", t: "Otkupna vrijed. €", n: 1, d: 0},
+  {k: "sigurnosna", t: "Sig. zaliha", n: 1, c: 1}, {k: "tocka_naruc", t: "Točka nar.", n: 1, c: 1},
+  {k: "eoq", t: "Kol. po narudžbi", n: 1}, {k: "trenutna", t: "Trenutna", n: 1}, {k: "narudzba", t: "Za naručiti", n: 1, b: 1}, {k: "status", t: "Status"},
+];
+function tablica(rows) {
+  const a0 = S.d.artikli;
+  const st = STUPCI.filter((c) => a0.some((r) => r[c.k] != null) && !(c.k === "dobavljac" && a0.every((r) => r.dobavljac === "(svi artikli)")));
+  const {k, dir} = S.sort;
+  const sorted = rows.slice().sort((a, b) => { const x = a[k], y = b[k]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "hr")) * dir; });
+  const pages = Math.max(1, Math.ceil(sorted.length / S.PER)); S.page = Math.min(S.page, pages - 1);
+  const pg = sorted.slice(S.page * S.PER, (S.page + 1) * S.PER);
+  S.vidljivi = {st, sorted};
+  const cell = (r, c) => { const v = r[c.k]; if (c.k === "status") return `<span class="tag ${esc(String(v).split(" ")[0])}">${esc(v)}</span>`; if (c.n) { const x = c.c ? Math.ceil(v) : v; return c.b ? `<b>${fmt(x, c.d ?? (Number.isInteger(x) ? 0 : 1))}</b>` : fmt(x, c.d ?? (Number.isInteger(x) ? 0 : 1)); } return esc(v); };
+  $("#tab").innerHTML = `<thead><tr>${st.map((c) => `<th class="sort ${c.n ? "n" : ""}" data-k="${c.k}">${c.t}${k === c.k ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead><tbody>${pg.map((r) => `<tr>${st.map((c) => `<td class="${c.n ? "n" : ""}">${cell(r, c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${st.length}" class="note">Nema artikala za ovaj filtar.</td></tr>`}</tbody>`;
+  $("#tab").querySelectorAll("th.sort").forEach((t) => t.onclick = () => { S.sort = {k: t.dataset.k, dir: S.sort.k === t.dataset.k ? -S.sort.dir : (STUPCI.find((c) => c.k === t.dataset.k).n ? -1 : 1)}; S.page = 0; render(); });
+  $("#brojArt").textContent = `${fmt(sorted.length)} od ${fmt(S.d.artikli.length)} artikala`;
+  $("#strInfo").textContent = sorted.length ? `Prikazano ${fmt(S.page * S.PER + 1)}–${fmt(S.page * S.PER + pg.length)} · stranica ${S.page + 1}/${pages}` : "";
+  $("#pPrev").disabled = S.page === 0; $("#pNext").disabled = S.page >= pages - 1;
+  const f = S.abc && S.xyz ? S.abc + S.xyz : S.abc ? "ABC: " + S.abc : S.xyz ? "XYZ: " + S.xyz : "";
+  const chips = [];
+  if (f) chips.push(["k", "Klasa: " + f]);
+  if (S.dob) chips.push(["d", "Dobavljač: " + S.dob]);
+  $("#chips").innerHTML = chips.map(([k, t]) => `<span class="chip" data-k="${k}" role="button" tabindex="0">${esc(t)} ✕</span>`).join(" ");
+  $("#chips").querySelectorAll(".chip").forEach((c) => c.onclick = () => { if (c.dataset.k === "k") S.abc = S.xyz = null; else { S.dob = ""; $("#fDob").value = ""; } S.page = 0; render(); });
+}
+$("#pPrev").onclick = () => { S.page--; render(); };
+$("#pNext").onclick = () => { S.page++; render(); };
+$("#dlPrikaz").onclick = () => {
+  const {st, sorted} = S.vidljivi;
+  const csv = [st.map((c) => c.t).join(";")].concat(sorted.map((r) => st.map((c) => { const v = r[c.k]; return v == null ? "" : typeof v === "number" ? String(v).replace(".", ",") : `"${String(v).replace(/"/g, '""')}"`; }).join(";"))).join("\n");
+  skini(new Blob(["﻿" + csv], {type: "text/csv"}), "artikli.csv");
+};
+$("#dlXls").onclick = () => preuzmi("/api/izvoz.xlsx", "stockoptimizer-rezultat.xlsx");
+
+/* ---------- narudžba ---------- */
+function narudzbaView(d) {
+  const s = d.sazetak, ima$ = s.ima_cijene;
+  const poDob = {}; d.narudzba.forEach((n) => (poDob[n.dobavljac] ||= []).push(n));
+  const ul = d.dobavljaci.filter((x) => x.stavki_narudzbe > 0);
+  const jedan = d.dobavljaci.length === 1 && d.dobavljaci[0].dobavljac === "(svi artikli)";
+  $("#hero").innerHTML = (d.ima_narudzbu
+    ? `<div class="hero">
+        <div class="stat"><b>${fmt(s.narudzba_stavki)}</b><span>artikala za naručiti</span></div>
+        ${ima$ ? `<div class="stat"><b>${eur(s.narudzba_vrijednost)}</b><span>vrijednost narudžbe</span></div>` : ""}
+        <div class="stat"><b>${ul.length}</b><span>${jedan ? "narudžba" : "dobavljača"}</span></div>
+      </div>`
+    : `<p style="margin:0">Izvoz nema stupac <b>Trenutna zaliha</b>, pa ne mogu odrediti što treba naručiti ovaj tjedan. Za svaki artikl ipak imate sigurnosnu zalihu, točku naručivanja i količinu po narudžbi u popisu artikala. Dodajte trenutnu zalihu i analizirajte ponovno.</p>`) +
+    (d.ima_narudzbu ? `<div class="row" style="margin-top:16px"><button type="button" id="dlCsv">Preuzmi narudžbu (CSV za ERP)</button></div>` : "");
+  if ($("#dlCsv")) $("#dlCsv").onclick = () => preuzmi("/api/narudzba.csv", "narudzba.csv");
+  $("#dobavljaci").innerHTML = d.ima_narudzbu ? (ul.length ? ul.map((x, i) => `
+    <details class="sup" ${i === 0 ? "open" : ""}>
+      <summary>${esc(x.dobavljac)} <span>${x.stavki_narudzbe} stavki${ima$ ? " · " + eur(x.vrijednost_narudzbe) : ""}</span></summary>
+      <div class="scroll"><table>
+        <thead><tr><th>Šifra</th><th>Naziv</th><th class="n">Količina</th>${ima$ ? '<th class="n">Nabavna</th><th class="n">Vrijednost</th>' : ""}</tr></thead>
+        <tbody>${(poDob[x.dobavljac] || []).map((n) => `<tr><td>${esc(n.sifra)}</td><td>${esc(n.naziv)}</td><td class="n"><b>${fmt(n.kolicina)}</b></td>${ima$ ? `<td class="n">${fmt(n.nabavna_cijena, 2)}</td><td class="n">${fmt(n.vrijednost, 2)}</td>` : ""}</tr>`).join("")}</tbody>
+      </table></div>
+    </details>`).join("") : `<div class="card">Nijedan artikl trenutno nije na ili ispod točke naručivanja. Ništa se ne naručuje.</div>`) : "";
+}
+/* ---------- cash-flow potencijal ---------- */
+const okr = (v) => {
+  if (v == null || isNaN(v)) return "–";
+  if (v < 1000) return "oko " + fmt(Math.round(v / 10) * 10) + " €";
+  const m = Math.pow(10, Math.floor(Math.log10(v)) - 1);
+  return "oko " + fmt(Math.round(v / m) * m) + " €";
+};
+const nArtikala = (n) => (n % 10 === 1 && n % 100 !== 11 ? "artikl" : (n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14) ? "artikla" : "artikala"));
+const SEMAFOR = ["#ff5d5d", "#ff9f43", "#f5c542", "#3ecf8e"];  // crvena, narančasta, žuta, zelena
+
+function cashflowKartica(d) {
+  const cf = d.sazetak.cashflow;
+  const el = $("#cfCard");
+  if (!cf) {
+    el.innerHTML = `<h2>Cash-flow potencijal zaliha</h2><p class="note" style="margin:0">Ovo pokazuje koliko bi zalihe stvarno vrijedile kad biste ih danas željeli pretvoriti u gotovinu. Ako u izvoz dodate <b>nabavnu cijenu</b> i <b>prosječnu zalihu</b> (ili trenutnu zalihu), aplikacija to izračunava.</p>`;
+    return;
+  }
+  const udioUm = cf.vrijednost ? cf.umanjenje / cf.vrijednost : 0;
+  const naj = cf.redovi.reduce((m, r) => (r.umanjenje > m.umanjenje ? r : m), cf.redovi[0]);
+  let nalaz;
+  if (udioUm < 0.05) nalaz = "Gotovo cijela zaliha vrti se dovoljno brzo, pa je umanjenje malo.";
+  else nalaz = `Najveći dio umanjenja (${okr(naj.umanjenje)}) dolazi iz artikala s koeficijentom obrtaja ${naj.pojas}, koji drže ${fmt(naj.udio, 0)}% vrijednosti zaliha.`;
+  if (cf.mrtva_artikala > 0) nalaz += ` Od toga ${fmt(cf.mrtva_artikala)} ${nArtikala(cf.mrtva_artikala)} (${okr(cf.mrtva_vrijednost)}) nema nikakve prodaje u 12 mjeseci, a to je mrtva zaliha.`;
+  const red = (r, i) => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${SEMAFOR[i]};margin-right:8px"></span>${esc(r.pojas)}</td><td class="n">${fmt(r.artikala)}</td><td class="n">${eur(r.vrijednost)}</td><td class="n">${fmt(r.udio, 1)}%</td><td class="n">${fmt(r.faktor, 0)}%</td><td class="n"><b>${eur(r.realna)}</b></td><td class="n">${eur(r.umanjenje)}</td></tr>`;
+  const uk = cf.redovi.reduce((t, r) => t + r.artikala, 0);
+  const prag = cf.prag_rucno ? `zadan ručno (${cf.prag})` : `${cf.prag}: artikle koji se vrte brže od 2 dijelimo na dva dijela po percentilu, a prag je medijan njihova obrtaja${cf.medijan != null ? " (" + fmt(cf.medijan, 1) + ")" : ""}, zaokružen na cijeli broj (najmanje 3)`;
+  el.innerHTML = `<h2>Cash-flow potencijal zaliha</h2>
+    <p style="margin:0 0 14px"><b>Otkupna vrijednost zaliha:</b> koliko bi zalihe stvarno vrijedile kad biste ih danas željeli pretvoriti u gotovinu.</p>
+    <div class="hero" style="margin-bottom:14px">
+      <div class="stat"><b>${eur(cf.vrijednost)}</b><span>vrijednost zaliha po nabavnoj cijeni</span></div>
+      <div class="stat"><b>${okr(cf.realna)}</b><span>otkupna vrijednost (cash-flow potencijal), ${fmt(cf.vrijednost ? cf.realna / cf.vrijednost * 100 : 0, 0)}% vrijednosti</span></div>
+      <div class="stat"><b>${okr(cf.umanjenje)}</b><span>umanjenje zbog sporog obrtaja</span></div>
+    </div>
+    <p style="margin:0 0 12px">${nalaz}</p>
+    <details>
+      <summary>Kako smo to izračunali</summary>
+      <p class="note" style="margin:8px 0 12px">Što se artikl sporije vrti, to je manje vjerojatno da će se cijela zaliha prodati po punoj vrijednosti. Zato se vrijednost zalihe (po nabavnoj cijeni) množi postotkom koji ovisi o koeficijentu obrtaja artikla: brzi artikli zadržavaju gotovo cijelu vrijednost, spori manji dio. Zaliha bez ikakve prodaje ulazi u prvu kategoriju. Gornji prag je ${prag}. Postoci su procjena i mijenjaju se u Pretpostavkama.</p>
+      <div class="scroll"><table><thead><tr><th>Koeficijent obrtaja</th><th class="n">Artikala</th><th class="n">Vrijednost zalihe</th><th class="n">Udio</th><th class="n">Postotak otkupne vrijednosti</th><th class="n">Otkupna vrijednost</th><th class="n">Umanjenje</th></tr></thead>
+      <tbody>${cf.redovi.map(red).join("")}<tr><td><b>Ukupno</b></td><td class="n"><b>${fmt(uk)}</b></td><td class="n"><b>${eur(cf.vrijednost)}</b></td><td class="n"><b>100%</b></td><td class="n">${cf.vrijednost ? fmt(cf.realna / cf.vrijednost * 100, 0) + "%" : "–"}</td><td class="n"><b>${eur(cf.realna)}</b></td><td class="n"><b>${eur(cf.umanjenje)}</b></td></tr></tbody></table></div>
+    </details>`;
+}
+
+/* ---------- špranca s oblačićima + faktori realizacije ---------- */
+const POSTAVKE = [
+  {grupa: "Narudžba i zalihe", opis: "Utječe na količinu za narudžbu i na sigurnosnu zalihu.", polja: [
+    {n: "trosak_narudzbe", l: "Trošak jedne narudžbe (€)", d: 60, min: 0, mali: "Administracija, prijevoz i zaprimanje, po narudžbi."},
+    {n: "drzanje_postotak", l: "Trošak držanja zaliha (% godišnje)", d: 20, min: 1, mali: "Kapital, prostor, osiguranje i kalo, kao % nabavne cijene."},
+    {n: "lead_time_default", l: "Zadani rok isporuke (dani)", d: 21, min: 1, mali: "Za artikle bez roka isporuke u datoteci."},
+    {n: "pokrivenost_tjedana", l: "Količina po narudžbi bez nabavne cijene (tjedni)", d: 4, min: 1, mali: "Koliko tjedana potražnje naručiti kad nema nabavne cijene."}]},
+  {grupa: "Razine usluge", opis: "Koliko često želite imati robu na zalihi. Viša razina znači veću sigurnosnu zalihu.", polja: [
+    {n: "razina_a", l: "Artikli klase A (%)", d: 98, min: 51, max: 99.9},
+    {n: "razina_b", l: "Artikli klase B (%)", d: 95, min: 51, max: 99.9},
+    {n: "razina_c", l: "Artikli klase C (%)", d: 90, min: 51, max: 99.9}]},
+  {grupa: "ABC raspodjela", opis: "Kako se promet dijeli na klase artikala. Najčešća raspodjela je 80 / 15 / 5: artikli A čine 80 % prometa, B sljedećih 15 %, a C preostalih 5 %.", polja: [
+    {n: "abc_a", l: "Klasa A: udio u prometu (%)", d: 80, min: 1, max: 98},
+    {n: "abc_b_udio", l: "Klasa B: udio u prometu (%)", d: 15, min: 1, max: 98},
+    {n: "abc_c_udio", l: "Klasa C: udio u prometu (%)", d: 5, ro: true, mali: "Ostatak do 100 %, računa se sam."}]},
+  {grupa: "XYZ podjela", opis: "Koliko je potražnja stabilna, mjereno koeficijentom varijacije (standardna devijacija / prosjek). Što je manji, to je potražnja stabilnija.", polja: [
+    {n: "xyz_x", l: "X (stabilna): koeficijent varijacije do", d: 0.5, min: 0.05, step: 0.05},
+    {n: "xyz_y", l: "Y (promjenjiva): koeficijent varijacije do", d: 1, min: 0.1, step: 0.05},
+    {n: "xyz_z_prikaz", l: "Z (nepravilna): koeficijent varijacije preko", d: 1, ro: true, mali: "Sve što je iznad Y."}]},
+  {grupa: "Cash-flow potencijal (otkupna vrijednost zaliha)", opis: "Koliko bi zalihe vrijedile da ih danas pretvarate u gotovinu. Artikli se razvrstavaju u četiri kategorije prema koeficijentu obrtaja, a svakoj pripada postotak vrijednosti. To su procjene, prilagodite ih svojoj branši.", polja: [
+    {n: "cf_0", l: "Obrtaj do 1, uključujući zalihu bez prodaje (%)", d: 30, min: 0, max: 100},
+    {n: "cf_1", l: "Obrtaj 1 do 2 (%)", d: 70, min: 0, max: 100},
+    {n: "cf_2", l: "Obrtaj 2 do praga (%)", d: 85, min: 0, max: 100},
+    {n: "cf_3", l: "Obrtaj preko praga (%)", d: 97, min: 0, max: 100},
+    {n: "cf_prag", l: "Gornji prag obrtaja", d: "", min: 2, max: 100, ph: "automatski", mali: "Prazno = automatski. Kategorije do 1 i 1 do 2 su uvijek iste, a artikle koji se vrte brže od 2 dijelimo na dva dijela po percentilu: prag je medijan njihova obrtaja, zaokružen na cijeli broj (najmanje 3)."}]},
+];
+const KLJUC_POST = "stockoptimizer.postavke";
+const ucitajPostavke = () => { try { return JSON.parse(localStorage.getItem(KLJUC_POST)) || {}; } catch (e) { return {}; } };
+function spremiPostavke() {
+  try {
+    const o = {};
+    document.querySelectorAll("#postavkeSadrzaj input:not([readonly])").forEach((i) => { if (i.value !== i.dataset.def) o[i.name] = i.value; });
+    if (Object.keys(o).length) localStorage.setItem(KLJUC_POST, JSON.stringify(o)); else localStorage.removeItem(KLJUC_POST);
+  } catch (e) { /* pregled bez pohrane: postavke vrijede do osvježavanja */ }
+}
+(function gradiPostavke() {
+  const sp = ucitajPostavke();
+  $("#postavkeSadrzaj").innerHTML = POSTAVKE.map((g) => `<section class="card"><h2>${esc(g.grupa)}</h2><p class="note" style="margin:0 0 12px">${esc(g.opis)}</p><div class="grid">${g.polja.map((p) =>
+    `<label>${esc(p.l)}<input type="number" name="${p.n}" value="${esc(p.ro ? p.d : (sp[p.n] ?? p.d))}" data-def="${esc(p.d)}"${p.ro ? " readonly tabindex=\"-1\" style=\"opacity:.7\"" : ""}${p.min != null ? ` min="${p.min}"` : ""}${p.max != null ? ` max="${p.max}"` : ""} step="${p.step || 1}"${p.ph ? ` placeholder="${esc(p.ph)}"` : ""}>${p.mali ? `<small>${esc(p.mali)}</small>` : ""}</label>`).join("")}</div></section>`).join("");
+  $("#postavkeSadrzaj").addEventListener("input", () => { izvedenePostavke(); spremiPostavke(); });
+  izvedenePostavke();
+})();
+function izvedenePostavke() {
+  const v = (n) => parseFloat(($(`#postavkeSadrzaj input[name=${n}]`) || {}).value);
+  const c = $("#postavkeSadrzaj input[name=abc_c_udio]"), z = $("#postavkeSadrzaj input[name=xyz_z_prikaz]");
+  if (c) { const r = 100 - v("abc_a") - v("abc_b_udio"); c.value = isNaN(r) ? "" : String(Math.round(r * 100) / 100); }
+  if (z) z.value = isNaN(v("xyz_y")) ? "" : String(v("xyz_y"));
+}
+$("#postPrimijeni").onclick = () => {
+  const A = parseFloat($("#postavkeSadrzaj input[name=abc_a]").value), B = parseFloat($("#postavkeSadrzaj input[name=abc_b_udio]").value);
+  if (isNaN(A) || isNaN(B) || A <= 0 || B <= 0 || A + B >= 100) { pokaziGresku("ABC raspodjela: A i B moraju biti veći od 0, a zajedno manji od 100 %, jer C dobiva ostatak."); return; }
+  const X = parseFloat($("#postavkeSadrzaj input[name=xyz_x]").value), Y = parseFloat($("#postavkeSadrzaj input[name=xyz_y]").value);
+  if (isNaN(X) || isNaN(Y) || X <= 0 || Y <= X) { pokaziGresku("XYZ podjela: granica za Y mora biti veća od granice za X."); return; }
+  spremiPostavke(); pokaziGresku(""); if (S.d) pokreni(S.demo); else ekran(S.prije || "start"); };
+$("#postZadano").onclick = () => { document.querySelectorAll("#postavkeSadrzaj input").forEach((i) => { i.value = i.dataset.def; }); izvedenePostavke(); spremiPostavke(); poruka("Vraćene su zadane vrijednosti."); setTimeout(() => poruka(""), 2500); };
+
+/* ---------- pregled špranci (na zahtjev) ---------- */
+const otvoriSprancu = (o) => $("#ovSpranca").classList.toggle("hidden", !o);
+$("#btnSpranca").onclick = () => otvoriSprancu(true);
+$("#ovZatvori").onclick = () => otvoriSprancu(false);
+$("#ovSpranca").addEventListener("click", (e) => { if (e.target.id === "ovSpranca") otvoriSprancu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") otvoriSprancu(false); });
+
+const PRIMJER = [
+  {"Šifra": "ART-001", "Naziv": "Vijak M6", "Dobavljač": "Alfa d.o.o.", "Nabavna cijena": "0,12", "Prodajna cijena": "0,20", "Prosječna zaliha": "3.100", "Trenutna zaliha": "1.500", "Na putu": "0", "Lead time": "14", "MOQ": "1.000", "Pakiranje": "500", mj: ["120", "…", "95"]},
+  {"Šifra": "ART-002", "Naziv": "Matica M6", "Dobavljač": "Alfa d.o.o.", "Nabavna cijena": "0,05", "Prodajna cijena": "0,09", "Prosječna zaliha": "2.400", "Trenutna zaliha": "900", "Na putu": "2.000", "Lead time": "14", "MOQ": "2.000", "Pakiranje": "1.000", mj: ["80", "…", "60"]},
+  {"Šifra": "ART-003", "Naziv": "Podloška", "Dobavljač": "Beta trgovina", "Nabavna cijena": "0,02", "Prodajna cijena": "0,04", "Prosječna zaliha": "8.700", "Trenutna zaliha": "300", "Na putu": "0", "Lead time": "7", "MOQ": "0", "Pakiranje": "5.000", mj: ["310", "…", "280"]}];
+async function sprancaPregled() {
+  let stupci;
+  try { const r = await fetch("/api/stupci"); if (!r.ok) throw 0; stupci = await r.json(); } catch (e) { $("#btnSpranca").classList.add("hidden"); return; }
+  const jeMj = (c) => c.naziv.startsWith("Mjesec");
+  const info = (i) => { const c = stupci[i]; $("#xlinfo").innerHTML = `<b>${esc(c.naziv)}</b><span class="tag ${c.obavezno ? "Uredno" : ""}">${c.obavezno ? "obavezno" : "neobavezno"}</span><p style="margin:6px 0 0">${esc(c.opis)}</p>`; document.querySelectorAll(".xh").forEach((b) => b.classList.toggle("on", +b.dataset.i === i)); };
+  const th = stupci.map((c, i) => `<th ${jeMj(c) ? 'colspan="3"' : ""}><button type="button" class="xh ${c.obavezno ? "req" : ""}" data-i="${i}" aria-label="${esc(c.naziv)}: što se dobiva"><span>${esc(c.naziv)}</span><span class="ic" aria-hidden="true">i</span></button></th>`).join("");
+  const tr = PRIMJER.map((r) => `<tr>${stupci.map((c) => jeMj(c) ? r.mj.map((v) => `<td>${v}</td>`).join("") : `<td>${esc(r[c.naziv] ?? "")}</td>`).join("")}</tr>`).join("");
+  $("#xl").innerHTML = `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+  document.querySelectorAll(".xh").forEach((b) => { const i = +b.dataset.i; b.addEventListener("click", () => info(i)); b.addEventListener("mouseenter", () => info(i)); b.addEventListener("focus", () => info(i)); });
+  info(stupci.findIndex(jeMj));
+}
+sprancaPregled();
+
+ekran("start");
+
+/* dok je stranica otvorena i vidljiva, javi poslužitelju svakih 10 min da ne zaspi usred rada */
+setInterval(() => { if (!document.hidden) fetch("/health").catch(() => {}); }, 10 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+# StockOptimizer – što naručiti ovaj tjedan
+
+Aplikacija iz izvoza iz ERP-a radi u dvije faze. Podaci se ne spremaju.
+
+1. **Analiza:** popis svih artikala (sortiranje, filtri po ABC/XYZ, dobavljaču i tekstu) i tri ABC/XYZ matrice: zalihe,
+   prodaja i odstupanje između njih. Mjera: vrijednost (€), količina ili broj artikala; prikaz: apsolutno ili postotak.
+   Klik na polje matrice (npr. AX) filtrira popis. Uz to sigurnosna zaliha, točka naručivanja, obrtaj i status.
+2. **Narudžba (izvršenje):** količine za naručiti po dobavljaču, CSV spreman za uvoz u ERP.
+
+Gumb "Isprobaj s primjerom" pokreće analizu na izmišljenim podacima, bez učitavanja datoteke.
+
+## Izračun
+
+| Veličina | Formula |
+|---|---|
+| ABC | raspodjela godišnjeg prometa (količina × prodajna cijena): zadano **80 / 15 / 5**, tj. A čini 80 % prometa, B sljedećih 15 %, C preostalih 5 % (u kodu kumulativne granice 80 i 95) |
+| XYZ | koeficijent varijacije 12 mjeseci: X do 0,5, Y od 0,5 do 1, Z preko 1 |
+| Sigurnosna zaliha | `z × σD × √(LT / horizont)`, horizont = 30 dana (σD je mjesečna): vremenski faktor je `√(LT/30)`; bez varijabilnosti roka isporuke (donja granica) |
+| Točka naručivanja | `D/dan × LT + sigurnosna zaliha` |
+| EOQ | `√(2 · D · S / H)`, `H = h × nabavna cijena`; zaokruženo na MOQ i pakiranje |
+| Narudžba | ako je (stanje + na putu) ≤ točka naručivanja: višekratnik EOQ-a koji dovodi poziciju iznad točke |
+| Obrtaj | godišnja potražnja / prosječna zaliha (nabavna vrijednost prodaje / nabavna vrijednost zalihe) |
+| Usklađenost | po 9 polja: udio u zalihama − udio u prodaji; ±2 p.b. spomenuti, ±5 p.b. nalaz; A-polja i zalihe < 80 % prodaje = rizik manjka |
+
+Zadano: razine usluge A 98 % / B 95 % / C 90 %, S = 60 € po narudžbi, h = 20 % godišnje, lead time 21 dan kad ga izvoz nema.
+
+## Dodatni pokazatelji
+
+- **ABC po prometu, marži ili količini:** prebacuje se u sučelju. Marža = prodajna − nabavna cijena (treba obje cijene), a artikli koji se
+  prodaju ispod nabavne cijene idu u C.
+- **ROI zaliha** (u literaturi GMROI) = godišnja bruto marža / prosječna zaliha po nabavnoj cijeni: 1 euro uložen u zalihe daje toliko eura bruto marže godišnje.
+  Prikazuje se po artiklu i za cijelu zalihu (treba obje cijene i prosječnu zalihu).
+- **Cash-flow potencijal zaliha (otkupna vrijednost zaliha):** koliko bi zalihe stvarno vrijedile da ih danas želite pretvoriti u
+  gotovinu. Uvijek četiri kategorije prema koeficijentu obrtaja artikla: **do 1** (uključuje zalihu bez ikakve prodaje), **1 do 2**,
+  **2 do X** i **preko X**. Kategorije do 1 i 1 do 2 su uvijek iste, a artikle koji se vrte brže od 2 dijelimo na dva dijela po
+  percentilu: gornji prag X je **medijan (50. percentil) obrtaja tih bržih artikala**, zaokružen na cijeli broj (najmanje 3; može se zadati ručno).
+  Tako su gornje dvije kategorije uvijek podjednako popunjene, a granice su cijeli brojevi. Vrijednost zalihe (po nabavnoj cijeni) množi se
+  postotkom kategorije. Zadani postoci su 30 / 70 / 85 / 97 % i **samo su procjena**; mijenjaju se u Pretpostavkama
+  (u kodu: `Parametri.cf_faktori`, `Parametri.cf_prag`). U sučelju je prvo rezultat (zaokružen) i rečenica o glavnom nalazu,
+  a tablica je u rasklopljenom odjeljku "Kako smo to izračunali".
+
+## Sučelje
+
+Jedan ekran u danom trenutku, uz korake na vrhu (**1 Podaci, 2 Analiza, 3 Narudžba**):
+
+1. **Podaci:** samo područje za datoteku. Gumb "Analiziraj" pojavi se tek kad je datoteka odabrana. Špranca (Excel, CSV), pregled
+   što mora biti u datoteci i primjer su sitne poveznice ispod.
+2. **Analiza:** četiri glavna broja i tri kartice: *Matrice*, *Artikli* i *Cash-flow*. Rjeđe opcije (ABC po marži ili količini,
+   dobavljač) su u "Više opcija". Klik na polje matrice otvara popis tih artikala.
+3. **Narudžba:** količine po dobavljaču i CSV za ERP.
+
+**Postavke** su zaseban ekran (gumb gore desno): trošak narudžbe i držanja, razine usluge, ABC/XYZ granice i cash-flow postoci.
+Pamte se u pregledniku (`localStorage`), a podaci kupca se i dalje ne spremaju.
+
+## Špranca za unos
+
+Preuzima se s početne stranice (Excel i CSV). Drugi redak špranci opisuje što se dobiva uz svaki stupac. Počinje znakom `#`,
+pa ga učitavanje preskače. Isti se opisi prikazuju u sučelju kao interaktivni pregled stupaca (`/api/stupci`).
+Opisi su na jednom mjestu: `engine.OPISI_STUPACA`.
+
+## Ulaz
+
+Excel ili CSV. **Obavezno je samo: šifra artikla i 12 uzastopnih stupaca s mjesečnom prodajom (količine).**
+Sve ostalo je dodatak koji otključava dodatne rezultate:
+
+| Dodatni stupac | Što otključava | Bez njega |
+|---|---|---|
+| Trenutna zaliha | količina za naručiti ovaj tjedan | samo sigurnosna zaliha, točka naručivanja i količina po narudžbi |
+| Na putu | ne naručuje se dvaput | narudžba ne uzima u obzir već naručeno (upozorenje) |
+| Nabavna cijena | pravi EOQ, vrijednosti u € | količina po narudžbi = potražnja za 4 tjedna (parametar) |
+| Prodajna cijena | ABC po prometu u € | ABC po nabavnoj vrijednosti, a bez cijena po količini |
+| Prosječna zaliha | obrtaj, status, usporedba zaliha i prodaje | koristi se trenutna zaliha, ako je ima |
+| Dobavljač | narudžba razdvojena po dobavljaču | jedna zajednička narudžba |
+| Lead time (dani) | stvarni rokovi | zadano 21 dan |
+| Naziv, MOQ, Pakiranje | čitljivost, zaokruživanje | – |
+
+Mjeseci moraju stajati jedan do drugoga; ako uz njih postoje drugi brojčani stupci koji ih prekidaju ili ih ima više
+od 12 uzastopno, aplikacija javlja grešku umjesto da pogađa. Predložak: `/api/predlozak.xlsx`.
+
+## Pokretanje
+
+```bash
+pip install -r requirements.txt
+python app.py                 # web na http://localhost:5001
+python -m pytest              # testovi izračuna
+```
+
+### Bez ERP integracije: lokalne mape
+
+```bash
+python cli.py --ulaz C:\StockOptimizer\ulaz --izlaz C:\StockOptimizer\izlaz
+```
+
+Uzima najnoviju datoteku iz ulazne mape i sprema `narudzba-GGGG-MM-DD.csv` (separator `;`, UTF-8, za uvoz u ERP)
+i Excel s cijelim rezultatom. Pokreće se ručno ili iz Windows Task Schedulera / cron-a, npr. petkom navečer.
+Sve postavke imaju zadane vrijednosti i mogu se promijeniti zastavicama (`--trosak-narudzbe 60`, `--razina-a 98` …).
+
+## Ograničenja
+
+- Status zalihe uspoređuje *prosječnu* zalihu sa sigurnosnom zalihom i EOQ-om; to je procjena, ne trenutno stanje.
+- Ako rok isporuke varira, sigurnosne su zalihe podcijenjene; izlaz to uvijek navodi.
+- Nema PDF-a ni izravne ERP integracije; izlaz je CSV/Excel.

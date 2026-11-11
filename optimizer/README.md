@@ -71,8 +71,14 @@ Sve ostalo je dodatak koji otključava dodatne rezultate:
 | Prodajna cijena | ABC po prometu u € | ABC po nabavnoj vrijednosti, a bez cijena po količini |
 | Prosječna zaliha | obrtaj, status, usporedba zaliha i prodaje | koristi se trenutna zaliha, ako je ima |
 | Dobavljač | narudžba razdvojena po dobavljaču | jedna zajednička narudžba |
+| Grupa (npr. Bakar/Optika, grupa materijala) | filtriranje cijele analize po grupi | – |
 | Lead time (dani) | stvarni rokovi | zadano 21 dan |
 | Naziv, MOQ, Pakiranje | čitljivost, zaokruživanje | – |
+
+**Bez mjesečne prodaje:** umjesto 12 mjeseci može se dati stupac **Godišnja potrošnja** (količina). Tada aplikacija računa
+ABC (samo po klasama, bez XYZ), obrtaj, dane zalihe, cash-flow potencijal, ROI zaliha i EOQ, ali **ne** računa XYZ, sigurnosnu zalihu,
+točku naručivanja ni narudžbu (za to treba varijabilnost potražnje po mjesecima), i na to jasno upozorava. Status artikla tada
+ovisi samo o obrtaju (bez prodaje, spor obrtaj ispod 1, dobar obrtaj). Negativna potrošnja (izdano iz skladišta) uzima se kao apsolutna vrijednost.
 
 Mjeseci moraju stajati jedan do drugoga; ako uz njih postoje drugi brojčani stupci koji ih prekidaju ili ih ima više
 od 12 uzastopno, aplikacija javlja grešku umjesto da pogađa. Predložak: `/api/predlozak.xlsx`.
@@ -100,3 +106,14 @@ Sve postavke imaju zadane vrijednosti i mogu se promijeniti zastavicama (`--tros
 - Status zalihe uspoređuje *prosječnu* zalihu sa sigurnosnom zalihom i EOQ-om; to je procjena, ne trenutno stanje.
 - Ako rok isporuke varira, sigurnosne su zalihe podcijenjene; izlaz to uvijek navodi.
 - Nema PDF-a ni izravne ERP integracije; izlaz je CSV/Excel.
+
+## Pretvarač za SAP tablicu "MSA zalihe FC"
+
+`tools/pretvori_msa.py` pretvara tu tablicu u šprancu aplikacije (godišnja potrošnja, trenutna zaliha, nabavna cijena, grupa, rok isporuke).
+Ne sadrži nikakve podatke klijenta; ulaz i izlaz zadaje korisnik. Podatke klijenta ne spremajte u repozitorij.
+
+```bash
+python tools/pretvori_msa.py ulaz.xlsx izlaz.xlsx                       # potrošnja 1.1.-1.11.2026 svedena na godinu
+python tools/pretvori_msa.py ulaz.xlsx izlaz.xlsx --potrosnja 2025      # stvarna potrošnja 2025.
+python tools/pretvori_msa.py ulaz.xlsx izlaz.xlsx --grupa materijal     # grupa = Grupa materijala umjesto Bakar/Optika
+```

@@ -164,15 +164,15 @@ def test_samo_trenutna_zaliha_daje_narudzbu_bez_cijena():
 def test_suvisni_numericki_stupac_i_ukupno_stupac():
     df = minimalni([[10] * 12, [20] * 12])
     df["Ukupno"] = 120
-    df["Grupa"] = [1, 2]
+    df["Težina"] = [1, 2]
     d, upoz = priprema(df)
-    assert any("Grupa" in u for u in upoz)
+    assert any("Težina" in u for u in upoz)
     assert d["m1"].tolist() == [10, 20] and d["m12"].tolist() == [10, 20]  # 'Ukupno' i 'Grupa' nisu mjeseci
 
 
 def test_nejasni_mjeseci_su_greska_a_ne_tiho_pomicanje():
     df = minimalni([[10] * 12, [20] * 12])
-    df.insert(5, "Grupa", [1, 2])  # usred mjeseci → nijedan niz od 12
+    df.insert(5, "Težina", [1, 2])  # usred mjeseci → nijedan niz od 12
     with pytest.raises(GreskaUnosa):
         priprema(df)
 
@@ -318,3 +318,68 @@ def test_obavezni_stupci_su_u_spranci_odmah_lijevo():
     assert STUPCI_PREDLOSKA[:2] == ["Šifra", "Naziv"]
     assert STUPCI_PREDLOSKA[2:14] == [f"Mjesec {i}" for i in range(1, 13)]   # 12 mjeseci odmah iza šifre i naziva
     assert len(STUPCI_PREDLOSKA) == 23 and len(set(STUPCI_PREDLOSKA)) == 23
+
+
+# ---------------------------------------------------------------- bez mjesečne prodaje (godišnja potrošnja)
+def godisnji(redovi, **extra):
+    """redovi: (potrošnja, nabavna cijena, zaliha)"""
+    d = pd.DataFrame({"Šifra": [f"G{i}" for i in range(len(redovi))],
+                      "Godišnja potrošnja": [r[0] for r in redovi],
+                      "Nabavna cijena": [r[1] for r in redovi],
+                      "Trenutna zaliha": [r[2] for r in redovi]})
+    for k, v in extra.items():
+        d[k] = v
+    return d
+
+
+def test_godisnja_potrosnja_bez_mjeseci():
+    d, upoz = priprema(godisnji([(1200, 10.0, 600), (120, 10.0, 600), (0, 10.0, 300)]))
+    assert any("godišnja potrošnja" in u.lower() for u in upoz)
+    r = izracunaj(d, Parametri())
+    a = r.artikli
+    assert r.sazetak["bez_mjeseci"] is True
+    assert list(a["xyz"]) == ["–"] * 3 and list(a["klasa"]) == list(a["abc"])
+    assert a["sigurnosna"].isna().all() and a["tocka_naruc"].isna().all()
+    assert a["narudzba"].isna().all() and a["eoq"].iloc[0] > 0           # EOQ se i dalje računa
+    assert list(a["obrtaj"].round(2)[:2]) == [2.0, 0.2]
+    assert list(a["status"]) == ["Dobar obrtaj", "Spor obrtaj", "Nema prodaje"]
+    assert list(r.uskladjenost["polje"]) == ["A", "B", "C"]              # matrica samo po ABC
+    assert r.sazetak["cashflow"] is not None and r.sazetak["vrijednost_zaliha"] == pytest.approx(15000)
+    assert not any("sigurnosn" in p.lower() and "z × σ" in p for p in r.pretpostavke)
+    from engine import izvezi_excel
+    assert len(izvezi_excel(r, Parametri())) > 1000                      # izvoz ne pada na praznoj sigurnosnoj zalihi
+
+
+def test_negativna_godisnja_potrosnja_je_izdano_iz_skladista():
+    d, upoz = priprema(godisnji([(-500, 2.0, 100), (-50, 2.0, 100)]))
+    assert d["potrosnja"].tolist() == [500, 50]
+    assert any("negativna" in u for u in upoz)
+
+
+def test_grupa_je_neobavezna_i_prenosi_se():
+    d, _ = priprema(godisnji([(10, 1.0, 5), (20, 1.0, 5)], **{"Grupa materijala": ["Optika", "Bakar"]}))
+    assert list(d["grupa"]) == ["Optika", "Bakar"]
+    d2, _ = priprema(godisnji([(10, 1.0, 5)]))
+    assert list(d2["grupa"]) == ["(sve)"]
+
+
+def test_s_mjesecima_godisnja_potrosnja_se_ignorira():
+    df = minimalni([[10] * 12])
+    df["Godišnja potrošnja"] = 9999
+    d, _ = priprema(df)
+    r = izracunaj(d, Parametri())
+    assert r.sazetak["bez_mjeseci"] is False and r.artikli["potraznja_god"].iloc[0] == 120
+
+
+def test_bez_mjeseci_i_bez_potrosnje_je_greska():
+    with pytest.raises(GreskaUnosa, match="Godišnja potrošnja"):
+        priprema(pd.DataFrame({"Šifra": ["a"], "Zaliha": [3]}))
+
+
+def test_manji_udio_zaliha_nije_rizik_manjka_kad_zaliha_dugo_traje():
+    # artikl A ima 292 dana zalihe, a rep C vrlo mnogo zalihe: A ima manji udio zaliha od prodaje, ali rizika manjka nema
+    redovi = [(1000, 10.0, 800)] + [(2, 10.0, 600)] * 40
+    d, _ = priprema(godisnji(redovi))
+    r = izracunaj(d, Parametri())
+    tekst = " ".join(r.sazetak["recenice"])
+    assert "rizika manjka nema" in tekst and "Rizik manjka je" not in tekst

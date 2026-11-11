@@ -101,7 +101,7 @@ def index():
 def odgovor(rez):
     a = rez.artikli
     imamo_narudzbu = bool(a["narudzba"].notna().any())
-    cols = ["sifra", "naziv", "dobavljac", "grupa", "abc", "xyz", "klasa", "potraznja_god", "promet", "zaliha",
+    cols = ["sifra", "naziv", "dobavljac", "abc", "xyz", "klasa", "potraznja_god", "promet", "zaliha",
             "vrijednost_zalihe", "obrtaj", "dani_zalihe", "sigurnosna", "tocka_naruc", "eoq", "eoq_izvor",
             "status", "lt_dani", "lt_izvor", "cv", "abc_marza", "abc_kolicina", "marza_pct", "marza_god", "gmroi",
             "cf_faktor", "cf_realna"]

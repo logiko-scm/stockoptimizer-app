@@ -112,9 +112,6 @@ ul.plain{padding-left:18px;color:var(--muted);font-size:.88rem}
 .xlinfo{background:var(--panel2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:12px 16px;margin-top:10px;font-size:.88rem;min-height:3.2rem}
 .xlinfo b{color:var(--accent)}
 .xlinfo .tag{margin-left:8px}
-.tag.Spor{color:var(--warn);border-color:var(--warn)}
-.tag.Dobar{color:var(--ok);border-color:var(--ok)}
-table.mx.jedan th:last-child,table.mx.jedan td.tot{width:auto}
 .hidden{display:none!important}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);max-width:min(560px,calc(100vw - 32px));background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.88rem;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:50}
 footer{color:#6c6c75;font-size:.78rem;margin-top:40px}
@@ -220,14 +217,13 @@ footer{color:#6c6c75;font-size:.78rem;margin-top:40px}
               <button type="button" data-v="marza">Marži</button>
               <button type="button" data-v="kolicina">Količini</button></div></div>
             <div id="dobWrap"><small>Dobavljač</small><select id="fDob" aria-label="Dobavljač"></select></div>
-            <div id="grupaWrap"><small>Grupa</small><select id="fGrupa" aria-label="Grupa"></select></div>
           </div>
           <p class="note" id="abcNote" style="margin:10px 0 0"></p>
         </details>
       </div>
       <div class="card">
         <div class="mxgrid" id="matrice"></div>
-        <p class="note" id="mxNote" style="margin:12px 0 0">Kliknite polje (npr. AX) da vidite artikle u njemu. Odstupanje: <span style="color:var(--bad)">crveno</span> = zalihe manje od prodaje (moguć rizik manjka, provjerite dane zalihe), <span style="color:var(--warn)">žuto</span> = zalihe veće od prodaje (vezan novac).</p>
+        <p class="note" style="margin:12px 0 0">Kliknite polje (npr. AX) da vidite artikle u njemu. Odstupanje: <span style="color:var(--bad)">crveno</span> = zalihe manje od prodaje (rizik manjka), <span style="color:var(--warn)">žuto</span> = zalihe veće od prodaje (vezan novac).</p>
       </div>
     </section>
 
@@ -290,7 +286,7 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 const fmt = (v, d = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("hr-HR", {minimumFractionDigits: d, maximumFractionDigits: d});
 const eur = (v) => v == null ? "–" : fmt(v, 0) + " €";
 
-const S = {ekran: "start", prije: "start", tab: "matrice", d: null, demo: false, osnova: "promet", mjera: "vrijednost", prikaz: "abs", abc: null, xyz: null, dob: "", grupa: "", q: "", sort: {k: "promet", dir: -1}, page: 0, PER: 100};
+const S = {ekran: "start", prije: "start", tab: "matrice", d: null, demo: false, osnova: "promet", mjera: "vrijednost", prikaz: "abs", abc: null, xyz: null, dob: "", q: "", sort: {k: "promet", dir: -1}, page: 0, PER: 100};
 const inp = $("#datoteka"), drop = $("#drop");
 
 /* ---------- učitavanje ---------- */
@@ -347,7 +343,7 @@ function ekran(n) {
   Object.entries(EKRANI).forEach(([k, sel]) => $(sel).classList.toggle("hidden", k !== n));
   const aktivan = {start: "st1", analiza: "st2", narudzba: "st3"}[n];
   ["st1", "st2", "st3"].forEach((id) => { const b = $("#" + id); if (id === aktivan) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
-  $("#st2").disabled = !S.d; $("#st3").disabled = !S.d || S.d.sazetak.bez_mjeseci;
+  $("#st2").disabled = $("#st3").disabled = !S.d;
   $("#btnPostavke").classList.toggle("hidden", n === "postavke");
   $("#metodBox").classList.toggle("hidden", !S.d);
   $("#postPrimijeni").textContent = S.d ? "Primijeni i izračunaj ponovno" : "Spremi";
@@ -366,7 +362,7 @@ $("#btnPostavke").onclick = () => ekran("postavke");
 $("#postNatrag").onclick = () => ekran(S.prije || "start");
 
 function start(d) {
-  S.d = d; S.abc = S.xyz = null; S.dob = ""; S.grupa = ""; S.q = ""; S.page = 0; S.osnova = "promet";
+  S.d = d; S.abc = S.xyz = null; S.dob = ""; S.q = ""; S.page = 0; S.osnova = "promet";
   const s = d.sazetak;
   S.mjera = s.ima_cijene ? "vrijednost" : "kolicina";
   $("#fQ").value = "";
@@ -375,11 +371,6 @@ function start(d) {
   const imaDob = dobs.length > 1 || (dobs.length === 1 && dobs[0] !== "(svi artikli)");
   $("#dobWrap").classList.toggle("hidden", !imaDob);
   $("#fDob").innerHTML = `<option value="">Svi (${dobs.length})</option>` + dobs.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join("");
-  const grupe = [...new Set(d.artikli.map((a) => a.grupa))].sort();
-  $("#grupaWrap").classList.toggle("hidden", grupe.length < 2);
-  $("#fGrupa").innerHTML = `<option value="">Sve (${grupe.length})</option>` + grupe.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join("");
-  $("#mxNote").firstChild.textContent = s.bez_mjeseci ? "Kliknite klasu (A, B ili C) da vidite njezine artikle. " : "Kliknite polje (npr. AX) da vidite artikle u njemu. ";
-  $("#naNarudzbu").classList.toggle("hidden", !!s.bez_mjeseci);
   $("#upozorenja").innerHTML = d.upozorenja.length ? `<details class="napomene"><summary>⚠ Napomene o podacima (${d.upozorenja.length})</summary><div style="margin-top:8px">${d.upozorenja.map((u) => `<div class="warn">${esc(u)}</div>`).join("")}</div></details>` : "";
   $("#pretpostavke").innerHTML = d.pretpostavke.map((p) => `<li>${esc(p)}</li>`).join("");
   const stat = [];
@@ -400,11 +391,11 @@ function start(d) {
 /* ---------- filtri i izvedeni podaci ---------- */
 function osnovni() {
   const q = S.q.trim().toLowerCase();
-  return S.d.artikli.filter((a) => (!S.dob || a.dobavljac === S.dob) && (!S.grupa || a.grupa === S.grupa) && (!q || String(a.sifra).toLowerCase().includes(q) || String(a.naziv).toLowerCase().includes(q)));
+  return S.d.artikli.filter((a) => (!S.dob || a.dobavljac === S.dob) && (!q || String(a.sifra).toLowerCase().includes(q) || String(a.naziv).toLowerCase().includes(q)));
 }
 function prikazani(base) { return base.filter((a) => (!S.abc || a._abc === S.abc) && (!S.xyz || a.xyz === S.xyz)); }
 
-function primijeniOsnovu() { S.d.artikli.forEach((a) => { a._abc = a["abc_" + S.osnova] || a.abc; a.klasa = a._abc + (a.xyz === "–" ? "" : a.xyz); }); }
+function primijeniOsnovu() { S.d.artikli.forEach((a) => { a._abc = a["abc_" + S.osnova] || a.abc; a.klasa = a._abc + a.xyz; }); }
 function render() { primijeniOsnovu(); const base = osnovni(); matrice(base); tablica(prikazani(base)); }
 
 /* ---------- matrice ---------- */
@@ -413,33 +404,30 @@ const MJERE = {
   kolicina: {zal: (a) => a.zaliha || 0, prod: (a) => a.potraznja_god || 0, f: (v) => fmt(v, 0)},
   broj: {zal: () => 1, prod: () => 1, f: (v) => fmt(v, 0)},
 };
-const KOL = () => (S.d && S.d.sazetak.bez_mjeseci ? ["–"] : ["X", "Y", "Z"]);   // bez mjesečne prodaje nema XYZ
 function agreg(rows, fn) {
-  const m = {};
-  for (const a of "ABC") { m[a] = {}; KOL().forEach((x) => (m[a][x] = 0)); }
+  const m = {A: {X: 0, Y: 0, Z: 0}, B: {X: 0, Y: 0, Z: 0}, C: {X: 0, Y: 0, Z: 0}};
   rows.forEach((r) => { if (m[r._abc]) m[r._abc][r.xyz] += fn(r); });
   return m;
 }
-const zbroj = (m) => "ABC".split("").reduce((t, a) => t + KOL().reduce((u, x) => u + m[a][x], 0), 0);
+const zbroj = (m) => "ABC".split("").reduce((t, a) => t + "XYZ".split("").reduce((u, x) => u + m[a][x], 0), 0);
 
 function tabMatrica(naslov, pod, m, fCell, klasa) {
-  const T = zbroj(m), kol = KOL(), jedan = kol.length === 1;
-  const redUk = (a) => kol.reduce((t, x) => t + m[a][x], 0);
+  const T = zbroj(m);
+  const redUk = (a) => "XYZ".split("").reduce((t, x) => t + m[a][x], 0);
   const stUk = (x) => "ABC".split("").reduce((t, a) => t + m[a][x], 0);
-  let h = `<div class="mxbox"><h3>${naslov} <small>${pod}</small></h3><table class="mx${jedan ? " jedan" : ""}"><thead><tr><th></th>${jedan ? "<th>Svi artikli</th>" : kol.map((x) => `<th class="ch" data-x="${x}" title="Filtriraj stupac ${x}">${x}</th>`).join("") + "<th>Σ</th>"}</tr></thead><tbody>`;
+  let h = `<div class="mxbox"><h3>${naslov} <small>${pod}</small></h3><table class="mx"><thead><tr><th></th>${"XYZ".split("").map((x) => `<th class="ch" data-x="${x}" title="Filtriraj stupac ${x}">${x}</th>`).join("")}<th>Σ</th></tr></thead><tbody>`;
   for (const a of "ABC") {
     h += `<tr><th class="rh" data-a="${a}" title="Filtriraj redak ${a}">${a}</th>`;
-    for (const x of kol) {
+    for (const x of "XYZ") {
       const k = klasa ? klasa(a, x, m[a][x], T) : "";
       const sel = S.abc === a && S.xyz === x ? " sel" : "";
       const sh = T ? m[a][x] / T : 0;
       const bg = !klasa ? `style="background:rgba(255,138,61,${(Math.min(sh, 1) * .6).toFixed(2)})"` : "";
       h += `<td><button type="button" class="cell ${k}${sel}" data-a="${a}" data-x="${x}" ${bg}>${fCell(m[a][x], T)}</button></td>`;
     }
-    if (!jedan) h += `<td class="tot">${fCell(redUk(a), T)}</td>`;
-    h += `</tr>`;
+    h += `<td class="tot">${fCell(redUk(a), T)}</td></tr>`;
   }
-  h += `<tr><th>Σ</th>${jedan ? "" : kol.map((x) => `<td class="tot">${fCell(stUk(x), T)}</td>`).join("")}<td class="tot"><b>${fCell(T, T)}</b></td></tr></tbody></table></div>`;
+  h += `<tr><th>Σ</th>${"XYZ".split("").map((x) => `<td class="tot">${fCell(stUk(x), T)}</td>`).join("")}<td class="tot"><b>${fCell(T, T)}</b></td></tr></tbody></table></div>`;
   return h;
 }
 
@@ -455,7 +443,7 @@ function matrice(base) {
   if (imaZal && S.mjera !== "broj") {
     const Tz = zbroj(zal), Tp = zbroj(pro);
     const dev = {A: {}, B: {}, C: {}}, up = {A: {}, B: {}, C: {}};
-    for (const a of "ABC") for (const x of KOL()) { const z = Tz ? zal[a][x] / Tz * 100 : 0, p = Tp ? pro[a][x] / Tp * 100 : 0; dev[a][x] = z - p; up[a][x] = [z, p]; }
+    for (const a of "ABC") for (const x of "XYZ") { const z = Tz ? zal[a][x] / Tz * 100 : 0, p = Tp ? pro[a][x] / Tp * 100 : 0; dev[a][x] = z - p; up[a][x] = [z, p]; }
     const kl = (a, x, v) => { const [z, p] = up[a][x]; if (a === "A" && p > 0 && z < .8 * p) return "stock"; return v <= -5 ? "stock" : v >= 5 ? "cap" : v <= -2 || v >= 2 ? "mild" : ""; };
     h += tabMatrica("Odstupanje", "zalihe − prodaja, postotni bodovi", dev, (v) => (v > 0 ? "+" : "") + fmt(v, 1), kl);
   }
@@ -471,12 +459,11 @@ document.querySelectorAll("#segMjera button").forEach((b) => b.onclick = () => {
 document.querySelectorAll("#segOsnova button").forEach((b) => b.onclick = () => { S.osnova = b.dataset.v; S.abc = S.xyz = null; S.page = 0; render(); });
 document.querySelectorAll("#segPrikaz button").forEach((b) => b.onclick = () => { S.prikaz = b.dataset.v; render(); });
 $("#fDob").onchange = (e) => { S.dob = e.target.value; S.page = 0; render(); };
-$("#fGrupa").onchange = (e) => { S.grupa = e.target.value; S.page = 0; render(); };
 let tq; $("#fQ").oninput = (e) => { clearTimeout(tq); tq = setTimeout(() => { S.q = e.target.value; S.page = 0; render(); }, 180); };
 
 /* ---------- popis artikala ---------- */
 const STUPCI = [
-  {k: "sifra", t: "Šifra"}, {k: "naziv", t: "Naziv"}, {k: "dobavljac", t: "Dobavljač"}, {k: "grupa", t: "Grupa"}, {k: "klasa", t: "Klasa"},
+  {k: "sifra", t: "Šifra"}, {k: "naziv", t: "Naziv"}, {k: "dobavljac", t: "Dobavljač"}, {k: "klasa", t: "Klasa"},
   {k: "potraznja_god", t: "Prodaja god.", n: 1}, {k: "promet", t: "Promet", n: 1, d: 0},
   {k: "zaliha", t: "Prosj. zaliha", n: 1}, {k: "vrijednost_zalihe", t: "Vrijed. zalihe €", n: 1},
   {k: "obrtaj", t: "Obrtaj", n: 1, d: 1}, {k: "dani_zalihe", t: "Dani zalihe", n: 1},
@@ -486,7 +473,7 @@ const STUPCI = [
 ];
 function tablica(rows) {
   const a0 = S.d.artikli;
-  const st = STUPCI.filter((c) => a0.some((r) => r[c.k] != null) && !(c.k === "dobavljac" && a0.every((r) => r.dobavljac === "(svi artikli)")) && !(c.k === "grupa" && a0.every((r) => r.grupa === "(sve)")));
+  const st = STUPCI.filter((c) => a0.some((r) => r[c.k] != null) && !(c.k === "dobavljac" && a0.every((r) => r.dobavljac === "(svi artikli)")));
   const {k, dir} = S.sort;
   const sorted = rows.slice().sort((a, b) => { const x = a[k], y = b[k]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "hr")) * dir; });
   const pages = Math.max(1, Math.ceil(sorted.length / S.PER)); S.page = Math.min(S.page, pages - 1);
@@ -498,13 +485,12 @@ function tablica(rows) {
   $("#brojArt").textContent = `${fmt(sorted.length)} od ${fmt(S.d.artikli.length)} artikala`;
   $("#strInfo").textContent = sorted.length ? `Prikazano ${fmt(S.page * S.PER + 1)}–${fmt(S.page * S.PER + pg.length)} · stranica ${S.page + 1}/${pages}` : "";
   $("#pPrev").disabled = S.page === 0; $("#pNext").disabled = S.page >= pages - 1;
-  const f = S.abc && S.xyz ? S.abc + (S.xyz === "–" ? "" : S.xyz) : S.abc ? "ABC: " + S.abc : S.xyz ? "XYZ: " + S.xyz : "";
+  const f = S.abc && S.xyz ? S.abc + S.xyz : S.abc ? "ABC: " + S.abc : S.xyz ? "XYZ: " + S.xyz : "";
   const chips = [];
   if (f) chips.push(["k", "Klasa: " + f]);
   if (S.dob) chips.push(["d", "Dobavljač: " + S.dob]);
-  if (S.grupa) chips.push(["g", "Grupa: " + S.grupa]);
   $("#chips").innerHTML = chips.map(([k, t]) => `<span class="chip" data-k="${k}" role="button" tabindex="0">${esc(t)} ✕</span>`).join(" ");
-  $("#chips").querySelectorAll(".chip").forEach((c) => c.onclick = () => { if (c.dataset.k === "k") S.abc = S.xyz = null; else if (c.dataset.k === "g") { S.grupa = ""; $("#fGrupa").value = ""; } else { S.dob = ""; $("#fDob").value = ""; } S.page = 0; render(); });
+  $("#chips").querySelectorAll(".chip").forEach((c) => c.onclick = () => { if (c.dataset.k === "k") S.abc = S.xyz = null; else { S.dob = ""; $("#fDob").value = ""; } S.page = 0; render(); });
 }
 $("#pPrev").onclick = () => { S.page--; render(); };
 $("#pNext").onclick = () => { S.page++; render(); };
